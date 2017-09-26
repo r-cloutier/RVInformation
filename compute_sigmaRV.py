@@ -8,7 +8,7 @@ import pylab as plt
 import astropy.io.fits as fits
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.interpolate import interp1d, UnivariateSpline
-from PyAstronomy.pyasl import broadGaussFast
+#from PyAstronomy.pyasl import broadGaussFast
 
 
 global c, h
@@ -80,8 +80,10 @@ def _convolve_band_spectrum(wl_microns, spectrum, band_str, R=75e3):
     # Convolve to instrument resolution
     FWHM_microns = wl_central_microns / float(R)
     sigma_microns = FWHM_microns / (2*np.sqrt(2*np.log(2)))
-    spectrum_conv = broadGaussFast(wl_band, spectrum_band, sigma_microns)
-
+    #spectrum_conv = broadGaussFast(wl_band, spectrum_band, sigma_microns)
+    spectrum_conv = spectrum_band ## TEMP
+    
+    
     if False:
         plt.plot(wl_band, spectrum_band, 'k-')
         plt.plot(wl_band, spectrum_conv, 'b-'), plt.show()
@@ -187,7 +189,7 @@ def _compute_W(wl, spec):
     return fint(wl)
 
 
-def compute_sigmaRV(wl, spec):
+def compute_sigRV(wl, spec):
     A = spec
     W = wl**2 * np.gradient(A, np.diff(wl)[0])**2 / A
     g = np.arange(4, W.size-4, dtype=int)
