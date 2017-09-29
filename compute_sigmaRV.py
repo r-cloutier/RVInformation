@@ -8,7 +8,7 @@ import pylab as plt
 import astropy.io.fits as fits
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.interpolate import interp1d, UnivariateSpline
-from PyAstronomy.pyasl import broadGaussFast
+from PyAstronomy.pyasl import broadGaussFast, rotBroad
 
 
 global c, h, bands
@@ -16,7 +16,7 @@ c, h = 299792458., 6.62607004e-34
 bands = ['Y','J','H','K']
 
 
-def get_reduced_spectrum(Teff, logg, Z, band_str, R, pltt=False):
+def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
     '''
     Download a stellar spectrum and get the reduced spectrum in the spectral 
     bin of interest.
@@ -25,6 +25,7 @@ def get_reduced_spectrum(Teff, logg, Z, band_str, R, pltt=False):
     _, spectrum = _get_full_spectrum(Teff, logg, Z)
     wl_conv, spec_conv = _convolve_band_spectrum(wl, spectrum, band_str, R,
                                                  pltt=pltt)
+    spec_conv = _rotational_convolution(wl_conv, spec_conv, vsini, pltt=pltt)
     wl_resamp, spec_resamp = _resample_spectrum(wl_conv, spec_conv, R)
     spec_scaled = _cgs2Nphot(wl_resamp, spec_resamp)
     return wl_resamp, spec_scaled
@@ -77,12 +78,17 @@ def _convolve_band_spectrum(wl_microns, spectrum, band_str, R, pltt=False):
     if band_str not in bands:
         raise ValueError('Unknown passband: %s'%band_str)
     wl_band, transmission, wl_central_microns = _get_band_transmission(band_str)
-    in_band = (wl_microns2 >= wl_band.min()) & (wl_microns2 <= wl_band.max())
+    g = transmission > 0
+    in_band = (wl_microns2 >= wl_band[g].min()) & \
+              (wl_microns2 <= wl_band[g].max())
+    ## TEMP
+    in_band = (wl_microns2 >= 1.17) & (wl_microns2 <= 1.33)
     wl_band, spectrum_band = wl_microns2[in_band], spectrum2[in_band]
 
     # Convolve to instrument resolution
     FWHM_microns = wl_central_microns / float(R)
     sigma_microns = FWHM_microns / (2*np.sqrt(2*np.log(2)))
+    print '\nConvolving the stellar spectrum to the instrumental resolution...'
     spectrum_conv = broadGaussFast(wl_band, spectrum_band, sigma_microns)
     
     if pltt:
@@ -92,6 +98,22 @@ def _convolve_band_spectrum(wl_microns, spectrum, band_str, R, pltt=False):
         plt.legend(), plt.show()
 
     return wl_band, spectrum_conv
+
+
+def _rotational_convolution(wl, spec, vsini, epsilon=0.6, pltt=False):
+    '''
+    Convolve the spectrum with Gaussian rotational profile based on the 
+    star's projected rotation velocity and assuming a constant linear 
+    limb-darkening across the stellar disk.
+    '''
+    print '\nConvolving the stellar spectrum with a rotational profile...'
+    spec_conv = rotBroad(wl, spec, epsilon, vsini)
+    if pltt:
+        plt.plot(wl, spec, 'k-', label='Original')
+        plt.plot(wl, spec_conv, 'b-', label='Rotationally convolved')
+        plt.xlabel('Wavelength [microns]'), plt.ylabel('Flux [erg/s/cm2/cm]')
+        plt.legend(), plt.show()
+    return spec_conv
 
 
 def _resample_spectrum(wl, spec, R):
@@ -211,7 +233,22 @@ def _remove_tellurics(wl, W):
     transmission = fint(wl)
     notellurics = np.where(transmission > .98)[0]
     return W[notellurics]
-    
+
+
+def exposure_time_calculator_per_band(mag, band_str, aperture_m, QE, R,
+                                      texpmin=1, texpmax=60, SNRtarget=150):
+    '''
+    Compute the exposure time to recieve a SNR target per resolution element in 
+    a particular band.
+    '''
+    texps = np.arange(texpmin, texpmax+.1, .1)  # minutes
+    SNRs = np.zeros(texps.size)
+    for i in range(texps.size):
+        SNRs[i] = _get_snr(mag, band_str, texps[i], aperture_m, QE, R)
+
+    g = abs(SNRs-SNRtarget) == abs(SNRs-SNRtarget).min()
+    return texps[g].min()
+
 
 
 ###############################################################################
@@ -247,5 +284,9 @@ def compute_sigmaRV(wl, spec, mag, band_str, texp_min=5, aperture_m=3.58,
     return sigmaRV_scaled
 
 
-## wl, spec = get_reduced_spectrum(3900, 4.5, 0, 'J', 7, 5)
-## compute_sigmaRV(wl, spec)
+## Teff, logg, Z, mag, band_str, vsini = 3900, 4.5, 0, 9, 'J', 1
+## aperture_m, QE, R = 3.58, .15, 75e3
+##
+## wl, spec = get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R)
+## texp = exposure_time_calculator_per_band(mag, band_str, aperture_m, QE, R)
+## compute_sigmaRV(wl, spec, mag, band_str, texp)
