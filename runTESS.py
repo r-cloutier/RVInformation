@@ -4,7 +4,7 @@ https://github.com/r-cloutier/Transiting_RVcalculator.git
 '''
 import numpy as np
 from get_tess_data import get_TESS_data
-from compute_sigmaRV import compute_sigmaRV, get_reduced_spectrum
+from compute_sigmaRV import *
 import pylab as plt
 import rvs
 from uncertainties import unumpy as unp
@@ -14,10 +14,10 @@ global G, rhoEarth, R, aperture, QE
 G, rhoEarth, R, aperture, QE = 6.67e-11, 5.51, 75e3, 3.58, .1
 
 
-def estimate_nRV(planetindex, band_strs, Z=0, R=75e3):
+def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE, Z=0):
     '''
     Estimate the number of RVs to measure the mass of a transiting planet at 
-    a given detection signifiance.
+    a given detection significance with a particular instrument.
     '''
     # Read-in TESS data for this planetary system
     ra,dec,rp,P,S,K,Rs,Teff,Vmag,Imag,Jmag,Kmag,dist,_,_,snr,_ = get_TESS_data()
@@ -45,6 +45,31 @@ def estimate_nRV(planetindex, band_strs, Z=0, R=75e3):
     loggs = np.arange(0,6.1,.5)
     logg_round = loggs[abs(loggs-logg) == np.min(abs(loggs-logg))]
 
+    # get vsini
+    
+    # get optical and nIR magnitudes from those given in the Sullivan sample
+    known_mags = [Vmag, Imag, Jmag, Kmag]
+    mags = _get_magnitudes(band_strs, known_mags, Teff_round, logg_round, Z)
+
+    # Estimate Nrv for this TESS planet
+    startheta = mags, Teff_round, logg_round, Z, vsini
+    planettheta = rp, mp
+    instrumenttheta = band_strs, R, aperture_m, QE
+    Nrv = _estimate_Nrv(startheta, planettheta, instrumenttheta)
+    return Nrv
+
+
+
+def _estimate_Nrv(startheta, planettheta, instrumenttheta):
+    '''
+    Estimate the number of RVs required to measure the semiamplitude K at a 
+    given signficance of a particular planet around a particular star.
+    '''
+    mags, Teff_round, logg_round, Z, vsini = startheta
+    rp, mp = planettheta
+    band_strs, R, aperture_m, QE = instrumenttheta
+    
+    
     # compute sigmaRV in each band
     sigmaRVs = np.zeros(len(band_strs))
     for i in range(sigmaRVs.size):
@@ -55,14 +80,75 @@ def estimate_nRV(planetindex, band_strs, Z=0, R=75e3):
                                                  aperture_m, QE, R)
         sigmaRVs[i] = compute_sigmaRV(wl, spec, mags[i], band_strs[i], texp)
     
-    # Compute nRV
+    # Compute the effective sigmaRV
     sigmaRV = 1. / np.sqrt(np.sum(1./sigmaRVs**2))
-    sigmaK_target = get_sigmaK_target_v1(mp, rp)
-    N = 2 * (sigmaRV / sigmaK_target)**2
+    sigmaRV_activity = 0.
+    sigmaRV_eff = np.sqrt(sigmaRV**2 + sigmaRV_activity**2)
     
-    return N
+    # Compute Nrv to measure K at a given significance 
+    ##sigmaK_target = get_sigmaK_target_v1(mp, rp)
+    sigmaK_target = .2 * K
+    Nrv = 2 * (sigmaRV_eff / sigmaK_target)**2
+    
+    return Nrv
 
 
+def _get_magnitudes(band_strs, known_mags, Teff, logg, Z,
+                    optical=False, nIR=False):
+    '''
+    Get the stellar apparent magnitude in all bands of interest and normalized 
+    by the known magnitudes from Sullivan et al 2015.
+    '''
+    # Get the full spectrum
+    wl = get_wavelengthgrid()
+    _, spectrum = get_full_spectrum(Teff, logg, Z)
+
+    # Get reference magnitude
+    if optical:
+        nIR = False
+    elif not nIR:
+        raise ValueError("One of `optical' or `nIR' keyword arguments " + \
+                         "must be set to True.")
+    Vmag, Imag, Jmag, Kmag = known_mags
+    if optical:  # optical bands
+        if 'V' in band_strs:
+            ref_band, ref_mag = 'V', Vmag
+        elif 'I' in band_strs:
+            ref_band, ref_mag = 'I', Imag
+        else:
+            raise ValueError('Do not have an optical reference magnitude ' + \
+                             "in `band_strs'.")
+
+    else:  # nIR bands
+        if 'J' in band_strs:
+            ref_band, ref_mag = 'J', Jmag
+        elif 'K' in band_strs:
+            ref_band, ref_mag = 'K', Kmag
+        else:
+            raise ValueError('Do not have a nIR reference magnitude ' + \
+                             "in `band_strs'.")
+        
+    # Integrate the spectrum over each band of interest to get flux
+    fluxes = np.zeros(len(band_strs))
+    for i in range(fluxes.size):
+        # Get band transmission
+        wl_band, transmission,_ = get_band_transmission(band_strs[i])
+        
+        # Get total flux over the bandpass
+        fint = interp1d(wl_band, transmission)
+        g = (wl >= wl_band.min()) & (wl <= wl_band.max())
+        wl2, spectrum2 = wl[g], spectrum[g]
+        transmission2 = fint(wl2)
+        fluxes[i] = np.sum(spectrum2 * transmission2)
+
+        # Get reference flux
+        if band_strs[i] == ref_band:
+            ref_flux = fluxes[i]
+
+    # Convert to magnitudes
+    mag  = -2.5*np.log10(fluxes / ref_flux) + ref_mag    
+    return mag
+        
 
 def get_planet_mass(rp):
     '''Compute the TESS planet mass from its reported radius.'''
@@ -70,7 +156,7 @@ def get_planet_mass(rp):
         return .44*rp**3 + .614*rp**4
     else:
         return 2.69*rp**.93
-    
+
 
 def get_stellar_mass(P, mp, K):
     '''Compute the stellar mass from the orbital period, planet mass, and RV 
@@ -95,4 +181,4 @@ def get_sigmaK_target_v1(rp, K, P, Ms, sigP=5e-5,
         urho = rhoEarth * ump / urp**3
         fracsigrho[i] = unp.nominal_values(urho) / unp.std_devs(urho)
 
-    return fracsigrho
+    return None

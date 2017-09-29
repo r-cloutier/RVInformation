@@ -21,8 +21,8 @@ def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
     Download a stellar spectrum and get the reduced spectrum in the spectral 
     bin of interest.
     '''
-    wl = _get_wavelengthgrid()
-    _, spectrum = _get_full_spectrum(Teff, logg, Z)
+    wl = get_wavelengthgrid()
+    _, spectrum = get_full_spectrum(Teff, logg, Z)
     wl_conv, spec_conv = _convolve_band_spectrum(wl, spectrum, band_str, R,
                                                  pltt=pltt)
     spec_conv = _rotational_convolution(wl_conv, spec_conv, vsini, pltt=pltt)
@@ -31,7 +31,7 @@ def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
     return wl_resamp, spec_scaled
 
 
-def _get_wavelengthgrid():
+def get_wavelengthgrid():
     '''
     Read-in the wavelength grid for the PHOENIX model spectra and return it in
     microns.
@@ -40,7 +40,7 @@ def _get_wavelengthgrid():
     return np.ascontiguousarray(dat.data) * 1e-4
 
 
-def _get_full_spectrum(Teff, logg, Z):
+def get_full_spectrum(Teff, logg, Z):
     '''
     Read-in model spectra from the PHOENIX library and return the header and 
     the spectral data.
@@ -77,7 +77,7 @@ def _convolve_band_spectrum(wl_microns, spectrum, band_str, R, pltt=False):
     # Isolate wavelength range
     if band_str not in bands:
         raise ValueError('Unknown passband: %s'%band_str)
-    wl_band, transmission, wl_central_microns = _get_band_transmission(band_str)
+    wl_band, transmission, wl_central_microns = get_band_transmission(band_str)
     g = transmission > 0
     in_band = (wl_microns2 >= wl_band[g].min()) & \
               (wl_microns2 <= wl_band[g].max())
@@ -127,7 +127,7 @@ def _resample_spectrum(wl, spec, R):
     return wl_resamp, fint(wl_resamp)
     
 
-def _get_band_transmission(band_str):
+def get_band_transmission(band_str):
     '''
     Read-in the transmission curve of a specific band on the same wavelength 
     grid as the PHOENIX spectra.
@@ -136,10 +136,10 @@ def _get_band_transmission(band_str):
         fname = '2MASS-2MASS.J.dat'
     elif band_str == 'H':
         fname = '2MASS-2MASS.H.dat'
-    elif band_str == 'Ks':
+    elif band_str == 'K':
         fname = '2MASS-2MASS.Ks.dat'
     else:
-        raise ValueError('Do not know what input bandpass %s is.'%band_str)
+        raise ValueError('Unknown bandpass: %s'%band_str)
 
     wl, transmission = np.loadtxt('input_data/%s'%fname).T
     wl *= 1e-4   # angstrom -> microns
