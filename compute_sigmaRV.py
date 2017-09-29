@@ -8,25 +8,26 @@ import pylab as plt
 import astropy.io.fits as fits
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.interpolate import interp1d, UnivariateSpline
-#from PyAstronomy.pyasl import broadGaussFast
+from PyAstronomy.pyasl import broadGaussFast
 
 
-global c, h
+global c, h, bands
 c, h = 299792458., 6.62607004e-34
+bands = ['Y','J','H','K']
 
 
-def get_reduced_spectrum(Teff, logg, Z, band_str, mag, texp_min,
-                         aperture_m=3.58, QE=.1, R=75e3):
+def get_reduced_spectrum(Teff, logg, Z, band_str, R, pltt=False):
     '''
     Download a stellar spectrum and get the reduced spectrum in the spectral 
     bin of interest.
     '''
     wl = _get_wavelengthgrid()
     _, spectrum = _get_full_spectrum(Teff, logg, Z)
-    wl_conv, spec_conv = _convolve_band_spectrum(wl, spectrum, band_str, R=R)
-    spec_scaled = _rescale_spectrum(spec_conv, mag, band_str, texp_min,
-                                    aperture_m, QE, R)
-    return wl_conv, spec_scaled
+    wl_conv, spec_conv = _convolve_band_spectrum(wl, spectrum, band_str, R,
+                                                 pltt=pltt)
+    wl_resamp, spec_resamp = _resample_spectrum(wl_conv, spec_conv, R)
+    spec_scaled = _cgs2Nphot(wl_resamp, spec_resamp)
+    return wl_resamp, spec_scaled
 
 
 def _get_wavelengthgrid():
@@ -61,7 +62,7 @@ def _get_full_spectrum(Teff, logg, Z):
     return spec_fits.header, spec_fits.data
 
 
-def _convolve_band_spectrum(wl_microns, spectrum, band_str, R=75e3):
+def _convolve_band_spectrum(wl_microns, spectrum, band_str, R, pltt=False):
     '''
     Convolve the spectrum in a given band with a Gaussian profile with a 
     FWHM specified by the spectral resolution of the instrument.
@@ -73,6 +74,8 @@ def _convolve_band_spectrum(wl_microns, spectrum, band_str, R=75e3):
     spectrum2 = fint(wl_microns2)
     
     # Isolate wavelength range
+    if band_str not in bands:
+        raise ValueError('Unknown passband: %s'%band_str)
     wl_band, transmission, wl_central_microns = _get_band_transmission(band_str)
     in_band = (wl_microns2 >= wl_band.min()) & (wl_microns2 <= wl_band.max())
     wl_band, spectrum_band = wl_microns2[in_band], spectrum2[in_band]
@@ -80,16 +83,27 @@ def _convolve_band_spectrum(wl_microns, spectrum, band_str, R=75e3):
     # Convolve to instrument resolution
     FWHM_microns = wl_central_microns / float(R)
     sigma_microns = FWHM_microns / (2*np.sqrt(2*np.log(2)))
-    #spectrum_conv = broadGaussFast(wl_band, spectrum_band, sigma_microns)
-    spectrum_conv = spectrum_band ## TEMP
+    spectrum_conv = broadGaussFast(wl_band, spectrum_band, sigma_microns)
     
-    
-    if False:
-        plt.plot(wl_band, spectrum_band, 'k-')
-        plt.plot(wl_band, spectrum_conv, 'b-'), plt.show()
+    if pltt:
+        plt.plot(wl_band, spectrum_band, 'k-', label='Full')
+        plt.plot(wl_band, spectrum_conv, 'b-', label='Convolved')
+        plt.xlabel('Wavelength [microns]'), plt.ylabel('Flux [erg/s/cm2/cm]')
+        plt.legend(), plt.show()
 
     return wl_band, spectrum_conv
 
+
+def _resample_spectrum(wl, spec, R):
+    '''
+    Resample the input spectrum to the size of the resolution element.
+    '''
+    pixels_per_element = 3.
+    dl = wl.min() / (pixels_per_element * R)
+    wl_resamp = np.arange(wl.min(), wl.max(), dl)
+    fint = interp1d(wl, spec)
+    return wl_resamp, fint(wl_resamp)
+    
 
 def _get_band_transmission(band_str):
     '''
@@ -111,17 +125,33 @@ def _get_band_transmission(band_str):
     return wl, transmission, np.average(wl, weights=transmission)
 
 
-def _rescale_spectrum(spec, mag, band_str, texp_min, aperture_m, QE, R):
+def _cgs2Nphot(wl_microns, spec_cgs, SNR=1e2, Jwl=1.25):
     '''
-    Rescale the spectrum such that its sum over the band equals the SNR.
-    spec` = k*spec where k = snr^2 / sum(spec) since sum(spec) = Nphot = snr^2
+    Convert the spectrum from cgs units to a number of photons with a SNR=100 
+    at the center of the J band (1.25 microns).
+    '''
+    assert wl_microns.size == spec_cgs.size
+    wl_cm = wl_microns * 1e-4
+    energy_erg = h*c / (wl_cm*1e-2) * 1e7
+    spec_Nphot = spec_cgs / energy_erg
+    centralJindex = np.where(abs(wl_microns-Jwl) == \
+                             np.min(abs(wl_microns-Jwl)))[0][0]
+    # SNR = sqrt(Nphot)
+    norm = SNR**2 / np.max(spec_Nphot[centralJindex-3:centralJindex+3])
+    spec_Nphot_scaled = norm * spec_Nphot    
+    return spec_Nphot_scaled
+
+
+def _rescale_SNR(sigmaRV, mag, band_str, texp_min, aperture_m, QE, R):
+    '''
+    Rescale sigmaRV from SNR=100 per resolution element to whatever SNR is 
+    acheived in the input band over a given integration time.
     '''
     snr = _get_snr(mag, band_str, texp_min, aperture_m, QE, R)
-    factor = snr**2 / np.sum(spec)
-    return factor * spec
+    return sigmaRV * np.sqrt(1e2 / snr)
+    
 
-
-def _get_snr(mag, band, texp_min, aperture_m, QE, R):
+def _get_snr(mag, band_str, texp_min, aperture_m, QE, R):
     '''
     Compute the SNR of the spectrum from the apparent magnitude of
     the star in a certain band (e.g. 'J'), the exposure time in
@@ -138,20 +168,20 @@ def _get_snr(mag, band, texp_min, aperture_m, QE, R):
 
     # Get flux density zeropoint (for m=0) in ergs s^-1 A^-1 cm^-2,
     # wavelength in angstroms and bandwidth in microns
-    if band == 'Y':
+    if band_str == 'Y':
         Fl = 6.063e-10
         l  = 10174.
-    elif band == 'J':
+    elif band_str == 'J':
         Fl = 3.143e-10
         l  = 12350.
-    elif band == 'H':
+    elif band_str == 'H':
         Fl = 1.144e-10
         l  = 16620.
-    elif band == 'K':
+    elif band_str == 'K':
         Fl = 4.306e-11
         l  = 21590.
     else:
-        raise ValueError('Not sure which band to use')
+        raise ValueError('Unknown passband: %s'%band_str)
 
     fl = Fl * 10**(-.4 * mag)
     Ephot = h_ergss * c_As / l
@@ -166,6 +196,22 @@ def _get_snr(mag, band, texp_min, aperture_m, QE, R):
 
     return SNR
 
+
+def _remove_tellurics(wl, W):
+    '''
+    Remove wavelengths samples that are affected by tellurics at the 
+    level of > 2%.
+    **To be used before computing sigmaRV from W**
+    '''
+    assert wl.size == W.size
+    wlTAPAS, transTAPAS = np.loadtxt('input_data/tapas_000001.ipac', \
+                                     skiprows=23).T
+    wlTAPAS *= 1e-3
+    fint = interp1d(wlTAPAS, transTAPAS)
+    transmission = fint(wl)
+    notellurics = np.where(transmission > .98)[0]
+    return W[notellurics]
+    
 
 
 ###############################################################################
@@ -189,11 +235,17 @@ def _compute_W(wl, spec):
     return fint(wl)
 
 
-def compute_sigRV(wl, spec):
-    A = spec
-    W = wl**2 * np.gradient(A, np.diff(wl)[0])**2 / A
-    g = np.arange(4, W.size-4, dtype=int)
-    return c / np.sqrt(np.sum(W[g]))
+def compute_sigmaRV(wl, spec, mag, band_str, texp_min=5, aperture_m=3.58,
+                    QE=.15, R=75e3):
+    W = _compute_W(wl, spec)
+    # remove tellurics
+    W_clean = _remove_tellurics(wl, W)
+    g = np.arange(4, W_clean.size-4, dtype=int)
+    sigmaRV = c / np.sqrt(np.sum(W_clean[g]))
+    sigmaRV_scaled = _rescale_SNR(sigmaRV, mag, band_str, texp_min, aperture_m,
+                                  QE, R)
+    return sigmaRV_scaled
 
 
-
+## wl, spec = get_reduced_spectrum(3900, 4.5, 0, 'J', 7, 5)
+## compute_sigmaRV(wl, spec)
