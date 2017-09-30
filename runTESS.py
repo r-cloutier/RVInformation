@@ -57,13 +57,12 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE, Z=0,
                            optical=optical, nIR=nIR)
 
     # Estimate Nrv for this TESS planet
-    startheta = mags, Teff_round, logg_round, Z, vsini
-    planettheta = rp, mp
+    startheta = mags, float(Teff_round), float(logg_round), Z, vsini
+    planettheta = rp, mp, K
     instrumenttheta = band_strs, R, aperture_m, QE
     Nrv = _estimate_Nrv(startheta, planettheta, instrumenttheta)
 
     return Nrv
-
 
 
 def _estimate_Nrv(startheta, planettheta, instrumenttheta):
@@ -72,7 +71,7 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta):
     given signficance of a particular planet around a particular star.
     '''
     mags, Teff_round, logg_round, Z, vsini = startheta
-    rp, mp = planettheta
+    rp, mp, K = planettheta
     band_strs, R, aperture_m, QE = instrumenttheta
     
     # compute sigmaRV in each band
@@ -82,18 +81,20 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta):
                                         band_strs[i], R)
         texp = exposure_time_calculator_per_band(mags[i], band_strs[i],
                                                  aperture_m, QE, R)
-        sigmaRVs[i] = compute_sigmaRV(wl, spec, mags[i], band_strs[i], texp)
-    
+        sigmaRVs[i] = compute_sigmaRV(wl, spec, mags[i], band_strs[i], texp,
+                                      aperture_m, QE, R)
+        print band_strs[i], texp, sigmaRVs[i]
+        
     # Compute the effective sigmaRV
     sigmaRV = 1. / np.sqrt(np.sum(1./sigmaRVs**2))
     sigmaRV_activity = 0.
     sigmaRV_eff = np.sqrt(sigmaRV**2 + sigmaRV_activity**2)
-    
-    # Compute Nrv to measure K at a given significance 
+
+    # Compute Nrv to measure K at a given significance
     ##sigmaK_target = get_sigmaK_target_v1(mp, rp)
     sigmaK_target = .2 * K
-    Nrv = 2 * (sigmaRV_eff / sigmaK_target)**2
-    
+    Nrv = np.round(2 * (sigmaRV_eff / sigmaK_target)**2)
+
     return Nrv
 
 

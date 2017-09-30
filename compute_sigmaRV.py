@@ -22,12 +22,12 @@ def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
     bin of interest.
     '''
     wl = get_wavelengthgrid()
-    _, spectrum = get_full_spectrum(Teff, logg, Z)
+    _, spectrum = get_full_spectrum(float(Teff), float(logg), float(Z))
     wl_conv, spec_conv = _convolve_band_spectrum(wl, spectrum, band_str, R,
                                                  pltt=pltt)
-    spec_conv = _rotational_convolution(wl_conv, spec_conv, vsini, pltt=pltt)
+    #spec_conv = _rotational_convolution(wl_conv, spec_conv, vsini, pltt=pltt)
     wl_resamp, spec_resamp = _resample_spectrum(wl_conv, spec_conv, R)
-    spec_scaled = _cgs2Nphot(wl_resamp, spec_resamp)
+    spec_scaled = _cgs2Nphot(wl, spectrum, wl_resamp, spec_resamp)
     return wl_resamp, spec_scaled
 
 
@@ -52,14 +52,14 @@ def get_full_spectrum(Teff, logg, Z):
     assert logg in loggs
     Zs = np.append(np.arange(-4,-2,1), np.arange(-2,1.5,.5))
     assert Z in Zs
-    
+
     # Download the spectrum
     prefix = "ftp://phoenix.astro.physik.uni-goettingen.de/HiResFITS/" + \
              "PHOENIX-ACES-AGSS-COND-2011/"
     fname = "Z-%.1f/lte%.5d-%.2f-%.1f"%(Z, Teff, logg, Z) + \
             ".PHOENIX-ACES-AGSS-COND-2011-HiRes.fits"
     spec_fits = fits.open(prefix+fname)[0]
-    
+
     return spec_fits.header, spec_fits.data
 
 
@@ -81,9 +81,10 @@ def _convolve_band_spectrum(wl_microns, spectrum, band_str, R, pltt=False):
     g = transmission > 0
     in_band = (wl_microns2 >= wl_band[g].min()) & \
               (wl_microns2 <= wl_band[g].max())
-    ## TEMP
-    in_band = (wl_microns2 >= 1.17) & (wl_microns2 <= 1.33)
-    wl_band, spectrum_band = wl_microns2[in_band], spectrum2[in_band]
+    fint = interp1d(wl_band, transmission)
+    transmission2 = fint(wl_microns2[in_band])
+    wl_band, spectrum_band = wl_microns2[in_band], \
+                             spectrum2[in_band]# * transmission2
 
     # Convolve to instrument resolution
     FWHM_microns = wl_central_microns / float(R)
@@ -159,22 +160,26 @@ def get_band_transmission(band_str):
     return wl, transmission, np.average(wl, weights=transmission)
 
 
-def _cgs2Nphot(wl_microns, spec_cgs, SNR=1e2, Jwl=1.25):
+def _cgs2Nphot(wl_full_microns, spec_full_cgs, wl_band_microns, spec_band_cgs,
+               SNR=1e2, Jwl=1.25):
     '''
-    Convert the spectrum from cgs units to a number of photons with a SNR=100 
-    at the center of the J band (1.25 microns).
+    Get the conversion factor to convert the spectrum from cgs units to a 
+    number of photons with a SNR=100 at the center of the J band (1.25 microns).
     '''
-    assert wl_microns.size == spec_cgs.size
-    wl_cm = wl_microns * 1e-4
-    energy_erg = h*c / (wl_cm*1e-2) * 1e7
-    spec_Nphot = spec_cgs / energy_erg
-    centralJindex = np.where(abs(wl_microns-Jwl) == \
-                             np.min(abs(wl_microns-Jwl)))[0][0]
+    assert wl_full_microns.size == spec_full_cgs.size
+    assert wl_band_microns.size == spec_band_cgs.size
+    wl_full_cm, wl_band_cm = wl_full_microns * 1e-4, wl_band_microns * 1e-4
+    energy_full_erg, energy_band_erg = h*c / (wl_full_cm*1e-2) * 1e7, \
+                                       h*c / (wl_band_cm*1e-2) * 1e7
+    spec_full_Nphot, spec_band_Nphot = spec_full_cgs / energy_full_erg, \
+                                       spec_band_cgs / energy_band_erg
+    centralJindex = np.where(abs(wl_full_microns-Jwl) == \
+                             np.min(abs(wl_full_microns-Jwl)))[0][0]
     # SNR = sqrt(Nphot)
-    norm = SNR**2 / np.max(spec_Nphot[centralJindex-3:centralJindex+3])
-    spec_Nphot_scaled = norm * spec_Nphot    
+    norm = SNR**2 / np.max(spec_full_Nphot[centralJindex-3:centralJindex+3])
+    spec_Nphot_scaled = norm * spec_band_Nphot
     return spec_Nphot_scaled
-
+                    
 
 def _rescale_SNR(sigmaRV, mag, band_str, texp_min, aperture_m, QE, R):
     '''
@@ -263,7 +268,7 @@ def _remove_tellurics(wl, W):
 
 
 def exposure_time_calculator_per_band(mag, band_str, aperture_m, QE, R,
-                                      texpmin=1, texpmax=60, SNRtarget=150):
+                                      texpmin=5, texpmax=60, SNRtarget=150):
     '''
     Compute the exposure time to recieve a SNR target per resolution element in 
     a particular band.
