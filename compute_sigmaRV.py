@@ -13,7 +13,7 @@ from PyAstronomy.pyasl import broadGaussFast, rotBroad
 
 global c, h, bands
 c, h = 299792458., 6.62607004e-34
-bands = ['Y','J','H','K']
+bands = ['u','g','r','i','z','Y','J','H','K']
 
 
 def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
@@ -132,7 +132,19 @@ def get_band_transmission(band_str):
     Read-in the transmission curve of a specific band on the same wavelength 
     grid as the PHOENIX spectra.
     '''
-    if band_str == 'J':
+    if band_str == 'u':
+        fname = 'SLOAN-SDSS.u.dat'
+    elif band_str == 'g':
+        fname = 'SLOAN/SDSS.g.dat'      
+    elif band_str == 'r':
+        fname = 'SLOAN/SDSS.r.dat'      
+    elif band_str == 'i':
+        fname = 'SLOAN/SDSS.i.dat'      
+    elif band_str == 'z':
+        fname = 'SLOAN/SDSS.z.dat'
+    elif band_str == 'Y':
+        fname = 'Gemini-Flamingos2.Y.dat'      
+    elif band_str == 'J':
         fname = '2MASS-2MASS.J.dat'
     elif band_str == 'H':
         fname = '2MASS-2MASS.H.dat'
@@ -141,7 +153,7 @@ def get_band_transmission(band_str):
     else:
         raise ValueError('Unknown bandpass: %s'%band_str)
 
-    wl, transmission = np.loadtxt('input_data/%s'%fname).T
+    wl, transmission = np.loadtxt('input_data/transmission/%s'%fname).T
     wl *= 1e-4   # angstrom -> microns
 
     return wl, transmission, np.average(wl, weights=transmission)
@@ -190,7 +202,22 @@ def _get_snr(mag, band_str, texp_min, aperture_m, QE, R):
 
     # Get flux density zeropoint (for m=0) in ergs s^-1 A^-1 cm^-2,
     # wavelength in angstroms and bandwidth in microns
-    if band_str == 'Y':
+    if band_str == 'u':
+        Fl = 3.639e-9
+        l  = 3594.93
+    elif band_str == 'g':
+        Fl = 5.521e-9
+        l  = 4640.42
+    elif band_str == 'r':
+        Fl = 2.529e-9
+        l  = 6122.33
+    elif band_str == 'i':
+        Fl = 1.409e-9
+        l  = 7439.49
+    elif band_str == 'z':
+        Fl = 8.501e-10
+        l  = 8897.06
+    elif band_str == 'Y':
         Fl = 6.063e-10
         l  = 10174.
     elif band_str == 'J':

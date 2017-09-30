@@ -14,7 +14,8 @@ global G, rhoEarth, R, aperture, QE
 G, rhoEarth, R, aperture, QE = 6.67e-11, 5.51, 75e3, 3.58, .1
 
 
-def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE, Z=0):
+def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE, Z=0,
+                      optical=False, nIR=True, protseed=None):
     '''
     Estimate the number of RVs to measure the mass of a transiting planet at 
     a given detection significance with a particular instrument.
@@ -46,16 +47,21 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE, Z=0):
     logg_round = loggs[abs(loggs-logg) == np.min(abs(loggs-logg))]
 
     # get vsini
+    Prot = _get_prot(Teff, seed=protseed)
+    I = np.arccos(np.random.uniform(-1,1))
+    vsini = 2*np.pi * rvs.Rsun2m(Rs)*1e-3 * np.sin(I) / rvs.days2sec(Prot)
     
     # get optical and nIR magnitudes from those given in the Sullivan sample
     known_mags = [Vmag, Imag, Jmag, Kmag]
-    mags = _get_magnitudes(band_strs, known_mags, Teff_round, logg_round, Z)
+    mags = _get_magnitudes(band_strs, known_mags, Teff_round, logg_round, Z,
+                           optical=optical, nIR=nIR)
 
     # Estimate Nrv for this TESS planet
     startheta = mags, Teff_round, logg_round, Z, vsini
     planettheta = rp, mp
     instrumenttheta = band_strs, R, aperture_m, QE
     Nrv = _estimate_Nrv(startheta, planettheta, instrumenttheta)
+
     return Nrv
 
 
@@ -69,11 +75,9 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta):
     rp, mp = planettheta
     band_strs, R, aperture_m, QE = instrumenttheta
     
-    
     # compute sigmaRV in each band
-    sigmaRVs = np.zeros(len(band_strs))
+    sigmaRVs = np.zeros(len(mags))
     for i in range(sigmaRVs.size):
-    
         wl, spec = get_reduced_spectrum(Teff_round, logg_round, Z, vsini,
                                         band_strs[i], R)
         texp = exposure_time_calculator_per_band(mags[i], band_strs[i],
@@ -93,6 +97,26 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta):
     return Nrv
 
 
+def _get_prot(Teff, seed=None):
+    '''
+    Draw a stellar rotation period based on the measured distribution from
+    McQuillan+2014 (2014ApJS..211...24M).
+    '''
+    Teffs, Prots = np.loadtxt('input_data/asu.tsv', skiprows=37).T
+    # Isolate range of effective temperatures
+    dT = 1e2
+    if Teff > Teffs.max():
+        g = Teffs >= Teffs.max()-dT
+    elif Teff < Teffs.min():
+        g = Teffs <= Teffs.min()+dT
+    else:
+        g = (Teffs >= Teff-dT) & (Teffs <= Teff+dT)
+    # Set seed
+    if seed != None:
+        np.random.seed(int(seed))
+    return np.random.choice(Prots[g]) + np.random.randn() * .1
+
+ 
 def _get_magnitudes(band_strs, known_mags, Teff, logg, Z,
                     optical=False, nIR=False):
     '''
