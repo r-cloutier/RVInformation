@@ -77,12 +77,6 @@ def _convolve_band_spectrum(wl_microns, spectrum, band_str, R, pltt=False):
     # Isolate wavelength range
     if band_str not in bands:
         raise ValueError('Unknown passband: %s'%band_str)
-    #wl_band, transmission, wl_central_microns = get_band_transmission(band_str)
-    #g = transmission > 0
-    #in_band = (wl_microns2 >= wl_band[g].min()) & \
-    #          (wl_microns2 <= wl_band[g].max())
-    #fint = interp1d(wl_band, transmission)
-    ##transmission2 = fint(wl_microns2[in_band])
     wlmin, wlmax, wl_central_microns = get_band_range(band_str)
     in_band = (wl_microns2 >= wlmin) & (wl_microns2 <= wlmax)
     wl_band, spectrum_band = wl_microns2[in_band], spectrum2[in_band]
@@ -135,7 +129,7 @@ def get_band_range(band_str):
     within the band.
     '''
     if band_str == 'u':
-        wlmin, wlmax, wlcentral = .34, .38, .35949
+        wlmin, wlmax, wlcentral = .35, .38, .35949
     elif band_str == 'g':
         wlmin, wlmax, wlcentral = .42, .52, .46404
     elif band_str == 'r':
@@ -158,7 +152,7 @@ def get_band_range(band_str):
     return wlmin, wlmax, wlcentral
     
 
-def get_band_transmission(band_str):
+def _get_band_transmission(band_str):
     '''
     Read-in the transmission curve of a specific band on the same wavelength 
     grid as the PHOENIX spectra.
@@ -291,8 +285,21 @@ def _remove_tellurics(wl, W):
     wlTAPAS, transTAPAS = np.loadtxt('input_data/tapas_000001.ipac', \
                                      skiprows=23).T
     wlTAPAS *= 1e-3
+    # remove rayleigh continuum via boxcar smoothing if passband is in
+    # that regime
+    if np.any(wl <=.8):
+        boxsteps = np.arange(wlTAPAS.min(), wlTAPAS.max(), 1e-2)
+        transTAPAS_continuum = np.zeros(boxsteps.size-1)
+    	for i in range(boxsteps.size-1):
+	    transTAPAS_continuum[i] = np.max(transTAPAS[(wlTAPAS >= boxsteps[i]) \
+                                                        & (wlTAPAS <= boxsteps[i+1])])
+	fint = interp1d(boxsteps[1:]-np.diff(boxsteps)[0]*.5, transTAPAS_continuum, \
+                        bounds_error=False, fill_value=.878)
+	transTAPAS = transTAPAS - fint(wlTAPAS) + 1.
+    # resample wavelength grid
     fint = interp1d(wlTAPAS, transTAPAS)
     transmission = fint(wl)
+    # only keep where transmission is > 98%
     notellurics = np.where(transmission > .98)[0]
     return W[notellurics]
 

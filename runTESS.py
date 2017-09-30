@@ -50,7 +50,11 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE, Z=0,
     Prot = _get_prot(Teff, seed=protseed)
     I = np.arccos(np.random.uniform(-1,1))
     vsini = 2*np.pi * rvs.Rsun2m(Rs)*1e-3 * np.sin(I) / rvs.days2sec(Prot)
-    
+
+    # optical or nIR bands?
+    optical = True if np.any([band.islower() for band in band_strs]) else False
+    nIR = not optical
+
     # get optical and nIR magnitudes from those given in the Sullivan sample
     known_mags = [Vmag, Imag, Jmag, Kmag]
     mags = _get_magnitudes(band_strs, known_mags, Teff_round, logg_round, Z,
@@ -136,8 +140,8 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z,
                          "must be set to True.")
     Vmag, Imag, Jmag, Kmag = known_mags
     if optical:  # optical bands
-        if 'V' in band_strs:
-            ref_band, ref_mag = 'V', Vmag
+        if 'v' in band_strs:
+            ref_band, ref_mag = 'v', Vmag
         elif 'i' in band_strs:
             ref_band, ref_mag = 'i', Imag
         else:
@@ -156,25 +160,20 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z,
     # Integrate the spectrum over each band of interest to get flux
     fluxes = np.zeros(len(band_strs))
     for i in range(fluxes.size):
-        # Get band transmission
-        #wl_band, transmission,_ = get_band_transmission(band_strs[i])
-	wlmin, wlmax,_ = get_band_range(band_strs[i])
-	wl_band = np.linspace(wlmin, wlmax, 10)
-	transmission = np.ones(wl_band.size)
 
         # Get total flux over the bandpass
-        fint = interp1d(wl_band, transmission)
-        g = (wl >= wl_band.min()) & (wl <= wl_band.max())
+        wlmin, wlmax,_ = get_band_range(band_strs[i])
+        g = (wl >= wlmin) & (wl <= wlmax)
         wl2, spectrum2 = wl[g], spectrum[g]
-        transmission2 = fint(wl2)
-        fluxes[i] = np.sum(spectrum2 * transmission2)
+        fluxes[i] = np.sum(spectrum2)
 
         # Get reference flux
         if band_strs[i] == ref_band:
             ref_flux = fluxes[i]
 
     # Convert to magnitudes
-    mag  = -2.5*np.log10(fluxes / ref_flux) + ref_mag    
+    mag  = -2.5*np.log10(fluxes / ref_flux) + ref_mag
+
     return mag
         
 
