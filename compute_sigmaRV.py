@@ -77,14 +77,14 @@ def _convolve_band_spectrum(wl_microns, spectrum, band_str, R, pltt=False):
     # Isolate wavelength range
     if band_str not in bands:
         raise ValueError('Unknown passband: %s'%band_str)
-    wl_band, transmission, wl_central_microns = get_band_transmission(band_str)
-    g = transmission > 0
-    in_band = (wl_microns2 >= wl_band[g].min()) & \
-              (wl_microns2 <= wl_band[g].max())
-    fint = interp1d(wl_band, transmission)
-    transmission2 = fint(wl_microns2[in_band])
-    wl_band, spectrum_band = wl_microns2[in_band], \
-                             spectrum2[in_band]# * transmission2
+    #wl_band, transmission, wl_central_microns = get_band_transmission(band_str)
+    #g = transmission > 0
+    #in_band = (wl_microns2 >= wl_band[g].min()) & \
+    #          (wl_microns2 <= wl_band[g].max())
+    #fint = interp1d(wl_band, transmission)
+    ##transmission2 = fint(wl_microns2[in_band])
+    in_band = _get_band_range(band_str, wl_microns2)
+    wl_band, spectrum_band = wl_microns2[in_band], spectrum2[in_band]## * transmission2
 
     # Convolve to instrument resolution
     FWHM_microns = wl_central_microns / float(R)
@@ -126,6 +126,35 @@ def _resample_spectrum(wl, spec, R):
     wl_resamp = np.arange(wl.min(), wl.max(), dl)
     fint = interp1d(wl, spec)
     return wl_resamp, fint(wl_resamp)
+
+
+def _get_band_range(band_str, wl_microns):
+    '''
+    Define wavelength range for a given band and return the indices that lie 
+    within the band.
+    '''
+    if band_str == 'u':
+        wlmin, wlmax = .34, .38
+    elif band_str == 'g':
+        wlmin, wlmax = .42, .52
+    elif band_str == 'r':
+        wlmin, wlmax = .57, .67
+    elif band_str == 'i':
+        wlmin, wlmax = .71, .81
+    elif band_str == 'z':
+        wlmin, wlmax = .84, .94
+    elif band_str == 'Y':
+        wlmin, wlmax = 1.0, 1.1
+    elif band_str == 'J':
+        wlmin, wlmax = 1.17, 1.33
+    elif band_str == 'H':
+        wlmin, wlmax = 1.50, 1.75  
+    elif band_str == 'K':
+        wlmin, wlmax = 2.07, 2.35
+    else:
+        raise ValueError('Unknown bandpass: %s'%band_str)
+
+    return (wl_microns >= wlmin) & (wl_microns <= wlmax)
     
 
 def get_band_transmission(band_str):
