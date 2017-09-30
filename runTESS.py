@@ -138,8 +138,8 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z,
     if optical:  # optical bands
         if 'V' in band_strs:
             ref_band, ref_mag = 'V', Vmag
-        elif 'I' in band_strs:
-            ref_band, ref_mag = 'I', Imag
+        elif 'i' in band_strs:
+            ref_band, ref_mag = 'i', Imag
         else:
             raise ValueError('Do not have an optical reference magnitude ' + \
                              "in `band_strs'.")
@@ -157,8 +157,11 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z,
     fluxes = np.zeros(len(band_strs))
     for i in range(fluxes.size):
         # Get band transmission
-        wl_band, transmission,_ = get_band_transmission(band_strs[i])
-        
+        #wl_band, transmission,_ = get_band_transmission(band_strs[i])
+	wlmin, wlmax,_ = get_band_range(band_strs[i])
+	wl_band = np.linspace(wlmin, wlmax, 10)
+	transmission = np.ones(wl_band.size)
+
         # Get total flux over the bandpass
         fint = interp1d(wl_band, transmission)
         g = (wl >= wl_band.min()) & (wl <= wl_band.max())
