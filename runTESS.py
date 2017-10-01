@@ -146,7 +146,7 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z,
             ref_band, ref_mag = 'i', Imag
         else:
             raise ValueError('Do not have an optical reference magnitude ' + \
-                             "in `band_strs'.")
+                             "in `band_strs'. Must include wither v or i.")
 
     else:  # nIR bands
         if 'J' in band_strs:
@@ -155,7 +155,7 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z,
             ref_band, ref_mag = 'K', Kmag
         else:
             raise ValueError('Do not have a nIR reference magnitude ' + \
-                             "in `band_strs'.")
+                             "in `band_strs'. Must include either J or K.")
         
     # Integrate the spectrum over each band of interest to get flux
     fluxes = np.zeros(len(band_strs))
