@@ -351,11 +351,3 @@ def compute_sigmaRV(wl, spec, mag, band_str, texp_min=5, aperture_m=3.58,
     sigmaRV_scaled = _rescale_SNR(sigmaRV, mag, band_str, texp_min, aperture_m,
                                   QE, R)
     return sigmaRV_scaled
-
-
-## Teff, logg, Z, mag, band_str, vsini = 3900, 4.5, 0, 9, 'J', 1
-## aperture_m, QE, R = 3.58, .15, 75e3
-##
-## wl, spec = get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R)
-## texp = exposure_time_calculator_per_band(mag, band_str, aperture_m, QE, R)
-## compute_sigmaRV(wl, spec, mag, band_str, texp)
