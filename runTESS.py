@@ -212,10 +212,26 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
     return texp, sigmaRV_phot, sigmaRV_eff, Nrv
 
 
+
 def _get_prot(Teff, seed=None):
     '''
     Draw a stellar rotation period based on the measured distribution from
     McQuillan+2014 (2014ApJS..211...24M).
+
+    Parameters
+    ----------
+    `Teff': scalar
+        The effective temperature of the star whose rotation period is being 
+        sampling
+    `protseed': scalar
+        Seed for the random number generator used to draw the stellar rotation 
+        period which is not know a-priori for the TESS stars from Sullivan
+    
+    Returns
+    -------
+    `protseed': float
+        The star's sampled rotation period in days
+
     '''
     Teffs, Prots = np.loadtxt('input_data/asu.tsv', skiprows=37).T
     # Isolate range of effective temperatures
@@ -230,6 +246,7 @@ def _get_prot(Teff, seed=None):
     if seed != None:
         np.random.seed(int(seed))
     return np.random.choice(Prots[g]) + np.random.randn() * .1
+
 
  
 def _get_magnitudes(band_strs, known_mags, Teff, logg, Z,
@@ -288,7 +305,21 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z,
         
 
 def get_planet_mass(rp):
-    '''Compute the TESS planet mass from its reported radius.'''
+    '''
+    Compute the TESS planet mass from its reported radius using the 
+    deterministic mass-radius relation from Weiss & Marcy 2014.
+
+    Parameters
+    ----------
+    `rp': scalar
+        The planet radius in Earth radii to be converted into a mass
+
+    Returns
+    -------
+    `mp': scalar
+        The planet mass in Earth masses
+
+    '''
     if rp < 1.5:
         return .44*rp**3 + .614*rp**4
     else:
@@ -296,8 +327,28 @@ def get_planet_mass(rp):
 
 
 def get_stellar_mass(P, mp, K):
-    '''Compute the stellar mass from the orbital period, planet mass, and RV 
-    semi-amplitude.'''
+    '''
+    Compute the stellar mass from the orbital period, planet mass, and RV 
+    semi-amplitude provided in Sullivan et al 2015.
+
+    Parameters
+    ----------
+    `P': scalar
+        The orbital period (in days) of the planet orbiting the star whose mass 
+        is being measured
+    `mp': scalar
+        The planet mass (in Earth masses) of the planet orbiting the star 
+        whose mass is being measured
+    `K': scalar
+        The RV semi-amplitude (in m/s) of the planet orbiting the star whose 
+        mass is being measured
+
+    Returns
+    -------
+    `Ms': float
+        The stellar mass in solar masses
+    
+    '''
     return rvs.kg2Msun(np.sqrt(2*np.pi*G / rvs.days2sec(P) * \
                                (rvs.Mearth2kg(mp) / K)**3))
 

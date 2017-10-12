@@ -18,13 +18,41 @@ bands = ['u','g','r','i','z','Y','J','H','K']
 
 def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
     '''
-    Download a stellar spectrum and get the reduced spectrum in the spectral 
-    bin of interest.
+    Download a PHEONIX stellar model spectrum and reduce the spectrum over 
+    a particular spectral bin via convolution with the instrumental resolution 
+    and a stellar rotation kernel.
+
+    Parameters
+    ----------
+    `Teff': scalar
+        The stellar effective temperature in Kelvin
+    `logg': scalar
+        The stellar logg in cgs units
+    `Z': scalar
+        The stellar metallicity [Fe/H] in solar units
+    `vsini': scalar
+        The projected stellar rotation velocity in km/s
+    `band_str': str
+        The letter designating the spectral band under consideration. Must be 
+        in ['u','g','r','i','z','Y','J','H','K']
+    `R': scalar
+        The spectral resolution of the spectrograph (lambda / d_lambda)
+    `pltt': boolean
+        If True, the fully reduced spectrum is plotted using pylab.show()
+
+    Returns
+    -------
+    `wl_resamp': numpy.array
+        Spectral array of wavelengths in microns
+    `spec_resamp': numpy.array
+        Stellar spectrum array in Nphotons/s/cm^2/cm
+
     '''
     wl = get_wavelengthgrid()
     _, spectrum = get_full_spectrum(float(Teff), float(logg), float(Z))
     wl_conv, spec_conv = _convolve_band_spectrum(wl, spectrum, band_str, R,
                                                  pltt=pltt)
+    #TEMP
     #spec_conv = _rotational_convolution(wl_conv, spec_conv, vsini, pltt=pltt)
     wl_resamp, spec_resamp = _resample_spectrum(wl_conv, spec_conv, R)
     spec_scaled = _cgs2Nphot(wl, spectrum, wl_resamp, spec_resamp)
@@ -33,8 +61,14 @@ def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
 
 def get_wavelengthgrid():
     '''
-    Read-in the wavelength grid for the PHOENIX model spectra and return it in
-    microns.
+    Read-in the wavelength grid for the PHOENIX model spectra and return it.
+    
+    Returns
+    -------
+    `wl': numpy.array
+        Full spectral array of wavelengths in microns (i.e. full spectral 
+        coverage)
+
     '''
     dat = fits.open('input_data/WAVE_PHOENIX-ACES-AGSS-COND-2011.fits')[0]
     return np.ascontiguousarray(dat.data) * 1e-4
@@ -42,8 +76,25 @@ def get_wavelengthgrid():
 
 def get_full_spectrum(Teff, logg, Z):
     '''
-    Read-in model spectra from the PHOENIX library and return the header and 
-    the spectral data.
+    Read-in model spectrum from the PHOENIX library and return the header and 
+    the full spectral data (i.e. no cut in wavelength).
+
+    Parameters
+    ----------
+    `Teff': scalar
+        The stellar effective temperature in Kelvin
+    `logg': scalar
+        The stellar logg in cgs units
+    `Z': scalar
+        The stellar metallicity [Fe/H] in solar units
+
+    Returns
+    -------
+    `header': astropy.io.fits.header.Header
+        The fits header of the PHEONIX stellar model
+    `data': numpy.array
+        Stellar spectrum array in erg/s/cm^2/cm
+
     '''
     # Define stellar values
     Teffs = np.append(np.arange(23e2,7e3,1e2), np.arange(7e3,121e2,2e2)) 
@@ -129,15 +180,15 @@ def get_band_range(band_str):
     within the band.
     '''
     if band_str == 'u':
-        wlmin, wlmax, wlcentral = .35, .38, .35949
-    elif band_str == 'g':
-        wlmin, wlmax, wlcentral = .42, .52, .46404
+        wlmin, wlmax, wlcentral = .31, .42, .3656
+    elif band_str == 'b':
+        wlmin, wlmax, wlcentral = .37, .54, .4353    
+    elif band_str == 'v':
+        wlmin, wlmax, wlcentral = .47, .69, .5477
     elif band_str == 'r':
-        wlmin, wlmax, wlcentral = .57, .67, .61223
+        wlmin, wlmax, wlcentral = .54, .85, .6349
     elif band_str == 'i':
-        wlmin, wlmax, wlcentral = .71, .81, .74395
-    elif band_str == 'z':
-        wlmin, wlmax, wlcentral = .84, .94, .88971
+        wlmin, wlmax, wlcentral = .70, 1.10, .8797
     elif band_str == 'Y':
         wlmin, wlmax, wlcentral = 1.0, 1.1, 1.01743
     elif band_str == 'J':
@@ -151,38 +202,6 @@ def get_band_range(band_str):
 
     return wlmin, wlmax, wlcentral
     
-
-def _get_band_transmission(band_str):
-    '''
-    Read-in the transmission curve of a specific band on the same wavelength 
-    grid as the PHOENIX spectra.
-    '''
-    if band_str == 'u':
-        fname = 'SLOAN-SDSS.u.dat'
-    elif band_str == 'g':
-        fname = 'SLOAN/SDSS.g.dat'      
-    elif band_str == 'r':
-        fname = 'SLOAN/SDSS.r.dat'      
-    elif band_str == 'i':
-        fname = 'SLOAN/SDSS.i.dat'      
-    elif band_str == 'z':
-        fname = 'SLOAN/SDSS.z.dat'
-    elif band_str == 'Y':
-        fname = 'Gemini-Flamingos2.Y.dat'      
-    elif band_str == 'J':
-        fname = '2MASS-2MASS.J.dat'
-    elif band_str == 'H':
-        fname = '2MASS-2MASS.H.dat'
-    elif band_str == 'K':
-        fname = '2MASS-2MASS.Ks.dat'
-    else:
-        raise ValueError('Unknown bandpass: %s'%band_str)
-
-    wl, transmission = np.loadtxt('input_data/transmission/%s'%fname).T
-    wl *= 1e-4   # angstrom -> microns
-
-    return wl, transmission, np.average(wl, weights=transmission)
-
 
 def _cgs2Nphot(wl_full_microns, spec_full_cgs, wl_band_microns, spec_band_cgs,
                SNR=1e2, Jwl=1.25):
@@ -305,7 +324,7 @@ def _remove_tellurics(wl, W):
 
 
 def exposure_time_calculator_per_band(mag, band_str, aperture_m, QE, R,
-                                      texpmin=5, texpmax=60, SNRtarget=150):
+                                      texpmin=10, texpmax=60, SNRtarget=150):
     '''
     Compute the exposure time to recieve a SNR target per resolution element in 
     a particular band.
@@ -320,8 +339,6 @@ def exposure_time_calculator_per_band(mag, band_str, aperture_m, QE, R,
 
 
 
-###############################################################################
-###############################################################################
 def _compute_W(wl, spec):
     '''
     Compute the weighting function F from the input spectrum using the Eqs. 
