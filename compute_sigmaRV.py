@@ -11,14 +11,14 @@ from scipy.interpolate import interp1d, UnivariateSpline
 from PyAstronomy.pyasl import broadGaussFast, rotBroad
 
 
-global c, h, bands
-c, h = 299792458., 6.62607004e-34
-bands = ['u','g','r','i','z','Y','J','H','K']
+global c, h, SNRreference, bands
+c, h, SNRreference = 299792458., 6.62607004e-34, 1e2
+bands = ['u','b','v','r','i','Y','J','H','K']
 
 
 def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
     '''
-    Download a PHEONIX stellar model spectrum and reduce the spectrum over 
+    Download a PHOENIX stellar model spectrum and reduce the spectrum over 
     a particular spectral bin via convolution with the instrumental resolution 
     and a stellar rotation kernel.
 
@@ -34,7 +34,7 @@ def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
         The projected stellar rotation velocity in km/s
     `band_str': str
         The letter designating the spectral band under consideration. Must be 
-        in ['u','g','r','i','z','Y','J','H','K']
+        in ['u','b','v','r','i','Y','J','H','K']
     `R': scalar
         The spectral resolution of the spectrograph (lambda / d_lambda)
     `pltt': boolean
@@ -51,11 +51,11 @@ def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
     wl = get_wavelengthgrid()
     _, spectrum = get_full_spectrum(float(Teff), float(logg), float(Z))
     wl_conv, spec_conv = _convolve_band_spectrum(wl, spectrum, band_str, R,
-                                                 pltt=pltt)
+                                                 pltt=False)
     #TEMP
     #spec_conv = _rotational_convolution(wl_conv, spec_conv, vsini, pltt=pltt)
     wl_resamp, spec_resamp = _resample_spectrum(wl_conv, spec_conv, R)
-    spec_scaled = _cgs2Nphot(wl, spectrum, wl_resamp, spec_resamp)
+    spec_scaled = cgs2Nphot(wl, spectrum, wl_resamp, spec_resamp)
     return wl_resamp, spec_scaled
 
 
@@ -91,7 +91,7 @@ def get_full_spectrum(Teff, logg, Z):
     Returns
     -------
     `header': astropy.io.fits.header.Header
-        The fits header of the PHEONIX stellar model
+        The fits header of the PHOENIX stellar model
     `data': numpy.array
         Stellar spectrum array in erg/s/cm^2/cm
 
@@ -116,8 +116,31 @@ def get_full_spectrum(Teff, logg, Z):
 
 def _convolve_band_spectrum(wl_microns, spectrum, band_str, R, pltt=False):
     '''
-    Convolve the spectrum in a given band with a Gaussian profile with a 
-    FWHM specified by the spectral resolution of the instrument.
+    Convolve the spectrum in a given band with a Gaussian profile whose FWHM 
+    is specified by the spectral resolution of the instrument.
+
+    Parameters
+    ----------
+    `wl_microns': array-like
+        Spectral array of wavelengths in microns
+    `spectrum': array-like
+        Stellar spectrum array in erg/s/cm^2/cm
+    `band_str': str
+        The letter designating the spectral band under consideration. Must be 
+        in ['u','b','v','r','i','Y','J','H','K']
+    `R': scalar
+        The spectral resolution of the spectrograph (lambda / d_lambda)
+    `pltt': boolean
+        If True, the convolved and original spectra are plotted using 
+        pylab.show()
+
+    Returns
+    -------
+    `wl_band': numpy.array 
+        Spectral array of wavelengths in microns over the spectral band
+    `spec_band': numpy.array 
+        Stellar spectrum array in erg/s/cm^2/cm over the spectral band
+
     '''
     # Create equidistant wl array
     wl_microns2 = np.linspace(wl_microns.min(), wl_microns.max(),
@@ -147,28 +170,65 @@ def _convolve_band_spectrum(wl_microns, spectrum, band_str, R, pltt=False):
     return wl_band, spectrum_conv
 
 
-def _rotational_convolution(wl, spec, vsini, epsilon=0.6, pltt=False):
+def _rotational_convolution(wl_band, spec_band, vsini, epsilon=0.6,
+                            pltt=False):
     '''
-    Convolve the spectrum with Gaussian rotational profile based on the 
-    star's projected rotation velocity and assuming a constant linear 
-    limb-darkening across the stellar disk.
+    Convolve the spectrum with rotational kernel based on the star's projected 
+    rotation velocity and assuming a constant linear limb-darkening across the 
+    stellar disk.
+
+    Parameters
+    ----------
+    `wl_band': array-like
+        Spectral array of wavelengths in microns
+    `spec_band': array-like
+        Stellar spectrum array in erg/s/cm^2/cm
+    `band_str': str
+        The letter designating the spectral band under consideration. Must be 
+        in ['u','b','v','r','i','Y','J','H','K']
+    `R': scalar
+        The spectral resolution of the spectrograph (lambda / d_lambda)
+    `pltt': boolean
+        If True, the convolved and original spectra are plotted using 
+        pylab.show()
+
+    Returns
+    -------
+    `spec_conv': numpy.array 
+        Stellar spectrum array in erg/s/cm^2/cm over the spectral band
+
+
     '''
     print '\nConvolving the stellar spectrum with a rotational profile...'
-    spec_conv = rotBroad(wl, spec, epsilon, vsini)
+    spec_conv = rotBroad(wl_band, spec_band, epsilon, vsini)
+
     if pltt:
-        plt.plot(wl, spec, 'k-', label='Original')
-        plt.plot(wl, spec_conv, 'b-', label='Rotationally convolved')
+        plt.plot(wl_band, spec_band, 'k-', label='Original')
+        plt.plot(wl_band, spec_conv, 'b-', label='Rotationally convolved')
         plt.xlabel('Wavelength [microns]'), plt.ylabel('Flux [erg/s/cm2/cm]')
         plt.legend(), plt.show()
+
     return spec_conv
 
 
-def _resample_spectrum(wl, spec, R):
+def _resample_spectrum(wl, spec, R, pixels_per_element=3):
     '''
-    Resample the input spectrum to the size of the resolution element.
+    Resample the input wavelength array and spectrum to the width of the 
+    resolution element.
+    
+    Parameters
+    ----------
+    `wl': array-like
+        Spectral array of wavelengths in microns
+    `spec': array-like
+        Stellar spectrum array in erg/s/cm^2/cm
+    `R': scalar
+        The spectral resolution of the spectrograph (lambda / d_lambda)
+    `pixels_per_element': scalar
+        The number of detector pixel in a single resolution element
+
     '''
-    pixels_per_element = 3.
-    dl = wl.min() / (pixels_per_element * R)
+    dl = wl.min() / (float(pixels_per_element) * R)
     wl_resamp = np.arange(wl.min(), wl.max(), dl)
     fint = interp1d(wl, spec)
     return wl_resamp, fint(wl_resamp)
@@ -176,38 +236,74 @@ def _resample_spectrum(wl, spec, R):
 
 def get_band_range(band_str):
     '''
-    Define wavelength range for a given band and return the indices that lie 
-    within the band.
+    Define the wavelength range for a given band and its central wavelength.
+
+    Parameters
+    ----------
+    `band_str': str
+        The letter designating the spectral band under consideration. Must be 
+        in ['u','b','v','r','i','Y','J','H','K']
+
+    Returns
+    -------
+    `wlmin': float
+        The smallest wavelength in the spectral band in microns
+    `wlmax': float
+        The largest wavelength in the spectral band in microns
+    `wlcentral': float
+        The smallest wavelength in the spectral band in microns
+
+
     '''
+    # bin widths are chosen to have the same number of wavelength elements
+    # per band for flux normalization purposes
     if band_str == 'u':
-        wlmin, wlmax, wlcentral = .31, .42, .3656
+        wlmin, wlmax, wlcentral = 0.31, 0.42, .3656
     elif band_str == 'b':
-        wlmin, wlmax, wlcentral = .37, .54, .4353    
+        wlmin, wlmax, wlcentral = 0.37, 0.59, .4353    
     elif band_str == 'v':
-        wlmin, wlmax, wlcentral = .47, .69, .5477
+        wlmin, wlmax, wlcentral = 0.47, 0.70, .5477
     elif band_str == 'r':
-        wlmin, wlmax, wlcentral = .54, .85, .6349
+        wlmin, wlmax, wlcentral = 0.54, 0.87, .6349
     elif band_str == 'i':
-        wlmin, wlmax, wlcentral = .70, 1.10, .8797
+        wlmin, wlmax, wlcentral = 0.70, 1.13, .8797
     elif band_str == 'Y':
-        wlmin, wlmax, wlcentral = 1.0, 1.1, 1.01743
+        wlmin, wlmax, wlcentral = 1.0, 1.1, 1.02
     elif band_str == 'J':
-        wlmin, wlmax, wlcentral = 1.17, 1.33, 1.2350
+        wlmin, wlmax, wlcentral = 1.17, 1.33, 1.22
     elif band_str == 'H':
-        wlmin, wlmax, wlcentral = 1.50, 1.75, 1.6620
+        wlmin, wlmax, wlcentral = 1.5, 1.75, 1.63
     elif band_str == 'K':
-        wlmin, wlmax, wlcentral = 2.07, 2.35, 2.1590
+        wlmin, wlmax, wlcentral = 2.07, 2.35, 2.19
     else:
         raise ValueError('Unknown bandpass: %s'%band_str)
 
     return wlmin, wlmax, wlcentral
     
 
-def _cgs2Nphot(wl_full_microns, spec_full_cgs, wl_band_microns, spec_band_cgs,
-               SNR=1e2, Jwl=1.25):
+def cgs2Nphot(wl_full_microns, spec_full_cgs, wl_band_microns, spec_band_cgs):
     '''
-    Get the conversion factor to convert the spectrum from cgs units to a 
-    number of photons with a SNR=100 at the center of the J band (1.25 microns).
+    Convert the input spectrum from cgs units (erg/s/cm^2/cm) to a the number 
+    of photons with a fixed SNR at the center of the J band (1.25 microns).
+
+    Parameters
+    ----------
+    `wl_full_microns': array-like
+        Spectral array of wavelengths (in microns) across the full PHOENIX 
+        spectral coverage
+    `spec_full_cgs': array-like
+        Stellar spectrum array (in erg/s/cm^2/cm) across the full PHOENIX 
+        spectral coverage
+    `wl_band_microns': array-like
+        Spectral array of wavelengths (in microns) across a single spectral band
+    `spec_band_cgs': array-like
+        Stellar spectrum array (in erg/s/cm^2/cm) across a single spectral band
+    
+    Results
+    -------
+    `spec_Nphot_scaled': numpy.array
+        Stellar spectrum array in Nphotons/s/cm^2/cm in a single spectral band
+
     '''
     assert wl_full_microns.size == spec_full_cgs.size
     assert wl_band_microns.size == spec_band_cgs.size
@@ -216,29 +312,74 @@ def _cgs2Nphot(wl_full_microns, spec_full_cgs, wl_band_microns, spec_band_cgs,
                                        h*c / (wl_band_cm*1e-2) * 1e7
     spec_full_Nphot, spec_band_Nphot = spec_full_cgs / energy_full_erg, \
                                        spec_band_cgs / energy_band_erg
+    Jwl = 1.25
     centralJindex = np.where(abs(wl_full_microns-Jwl) == \
                              np.min(abs(wl_full_microns-Jwl)))[0][0]
     # SNR = sqrt(Nphot)
-    norm = SNR**2 / np.max(spec_full_Nphot[centralJindex-3:centralJindex+3])
+    norm = SNRreference**2 / \
+           np.max(spec_full_Nphot[centralJindex-3:centralJindex+3])
     spec_Nphot_scaled = norm * spec_band_Nphot
     return spec_Nphot_scaled
                     
 
-def _rescale_SNR(sigmaRV, mag, band_str, texp_min, aperture_m, QE, R):
+def _rescale_sigmaRV(sigmaRV, mag, band_str, texp_min, aperture_m, QE, R):
     '''
     Rescale sigmaRV from SNR=100 per resolution element to whatever SNR is 
     acheived in the input band over a given integration time.
+
+    Parameters
+    ----------
+    `sigmaRV': scalar
+        The photon-noise-limited RV precision in m/s
+    `mag': scalar
+        The stellar magnitude in spectral band given in `band_str'
+    `band_str': str
+        The letter designating the spectral band under consideration. Must be 
+        in ['u','b','v','r','i','Y','J','H','K']
+    `texp_min': scalar
+        The integration time in minutes
+    `aperture_m': float
+        The telescope's aperture diameter in meters
+    `QE': scalar
+        The quantum efficiency of the detector (0<QE<=1)
+    `R': scalar
+        The spectral resolution of the spectrograph (lambda / d_lambda)
+
+    Returns
+    -------
+    `SNR': float
+        The rescaled SNR of the spectrum
+
     '''
     snr = _get_snr(mag, band_str, texp_min, aperture_m, QE, R)
-    return sigmaRV * np.sqrt(1e2 / snr)
+    return sigmaRV * np.sqrt(SNRreference / snr)
     
 
 def _get_snr(mag, band_str, texp_min, aperture_m, QE, R):
     '''
-    Compute the SNR of the spectrum from the apparent magnitude of
-    the star in a certain band (e.g. 'J'), the exposure time in
-    minutes, the aperture of the telescope in meters, detector efficiency,
-    the element resolution in km/s.
+    Compute the SNR of the spectrum in a certain band (e.g. 'J').
+
+    Parameters
+    ----------
+    `mag': scalar
+        The stellar magnitude in spectral band given in `band_str'
+    `band_str': str
+        The letter designating the spectral band under consideration. Must be 
+        in ['u','b','v','r','i','Y','J','H','K']
+    `texp_min': scalar
+        The integration time in minutes
+    `aperture_m': float
+        The telescope's aperture diameter in meters
+    `QE': scalar
+        The quantum efficiency of the detector (0<QE<=1)
+    `R': scalar
+        The spectral resolution of the spectrograph (lambda / d_lambda)
+
+    Returns
+    -------
+    `SNR': float
+        The SNR of the spectrum in a certain band
+
     '''
     # Define constants
     area_cm2 = np.pi * (aperture_m*1e2/2)**2
@@ -294,19 +435,35 @@ def _get_snr(mag, band_str, texp_min, aperture_m, QE, R):
     return SNR
 
 
-def _remove_tellurics(wl, W):
+def _remove_tellurics_from_W(wl_band, W, transmission_threshold=.02):
     '''
-    Remove wavelengths samples that are affected by tellurics at the 
-    level of > 2%.
-    **To be used before computing sigmaRV from W**
+    Remove wavelengths that are sampled at wavelengths affected by tellurics at the 
+    level more than a specified threshold.
+
+    Parameters
+    ----------
+    `wl_band': array-like
+        Spectral array of wavelengths in microns
+    `W': array-like
+        Spectral weighting function from Eq. X in Bouchy et al 2001 in Nphot/s/cm^2/cm
+    `transmission_threshold': scalar
+        Maximum fraction absorption from tellurics. Only keep where transmission is 
+        greater than 1-`transmission_threshold'
+
+    Returns
+    -------
+    `Wout': numpy.array()
+        Spectral weighting function only where the atmospheric transmission is 
+        favourable
+
     '''
-    assert wl.size == W.size
+    assert wl_band.size == W.size
     wlTAPAS, transTAPAS = np.loadtxt('input_data/tapas_000001.ipac', \
                                      skiprows=23).T
     wlTAPAS *= 1e-3
-    # remove rayleigh continuum via boxcar smoothing if passband is in
-    # that regime
-    if np.any(wl <=.8):
+
+    # remove rayleigh continuum via boxcar smoothing if passband is in that regime
+    if np.any(wl_band <=.8):
         boxsteps = np.arange(wlTAPAS.min(), wlTAPAS.max(), 1e-2)
         transTAPAS_continuum = np.zeros(boxsteps.size-1)
     	for i in range(boxsteps.size-1):
@@ -315,11 +472,13 @@ def _remove_tellurics(wl, W):
 	fint = interp1d(boxsteps[1:]-np.diff(boxsteps)[0]*.5, transTAPAS_continuum, \
                         bounds_error=False, fill_value=.878)
 	transTAPAS = transTAPAS - fint(wlTAPAS) + 1.
-    # resample wavelength grid
+
+    # resample the wavelength grid
     fint = interp1d(wlTAPAS, transTAPAS)
-    transmission = fint(wl)
-    # only keep where transmission is > 98%
-    notellurics = np.where(transmission > .98)[0]
+    transmission = fint(wl_band)
+
+    # only keep where transmission > 1-threshold
+    notellurics = np.where(transmission > (1.-transmission_threshold))[0]
     return W[notellurics]
 
 
@@ -339,7 +498,7 @@ def exposure_time_calculator_per_band(mag, band_str, aperture_m, QE, R,
 
 
 
-def _compute_W(wl, spec):
+def _compute_W(wl_band, spec_band):
     '''
     Compute the weighting function F from the input spectrum using the Eqs. 
     from Bouchy+2001.
@@ -362,9 +521,9 @@ def compute_sigmaRV(wl, spec, mag, band_str, texp_min=5, aperture_m=3.58,
                     QE=.15, R=75e3):
     W = _compute_W(wl, spec)
     # remove tellurics
-    W_clean = _remove_tellurics(wl, W)
+    W_clean = _remove_tellurics_from_W(wl, W)
     g = np.arange(4, W_clean.size-4, dtype=int)
     sigmaRV = c / np.sqrt(np.sum(W_clean[g]))
-    sigmaRV_scaled = _rescale_SNR(sigmaRV, mag, band_str, texp_min, aperture_m,
-                                  QE, R)
+    sigmaRV_scaled = _rescale_sigmaRV(sigmaRV, mag, band_str, texp_min,
+                                      aperture_m, QE, R)
     return sigmaRV_scaled

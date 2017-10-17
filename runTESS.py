@@ -10,8 +10,8 @@ import rvs
 from uncertainties import unumpy as unp
 
 
-global G, rhoEarth
-G, rhoEarth = 6.67e-11, 5.51
+global G, rhoEarth, c, h
+G, rhoEarth, c, h = 6.67e-11, 5.51, 299792458., 6.62607004e-34
 
 
 def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
@@ -30,9 +30,9 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     `band_strs': list of strs
         A list of the spectral bands that span the wavelength coverage of the 
         spectrograph used to measure the radial velocities of the TESS star. 
-        All band_strs entries must be in ['u','g','r','i','z','Y','J','H','K'] 
-        and at least one of ['i','J','K'] must be included for scaling of the 
-        TESS stars from Sullivan
+        All band_strs entries must be in ['u','b','v','r','i','Y','J','H','K']
+        and at least one of ['v','i','J','K'] must be included for scaling of 
+        the TESS stars from Sullivan
     `R': scalar
         The spectral resolution of the spectrograph (lambda / d_lambda)
     `aperture_m': float
@@ -106,7 +106,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     # Get the stellar magnitudes in the desired bands scaled to the results
     # from Sullivan
     known_mags = [Vmag, Imag, Jmag, Kmag]
-    mags = _get_magnitudes(band_strs, known_mags, Teff_round, logg_round, Z,
+    mags = _get_magnitudes(band_strs, known_mags, Teff_round, logg_round, Z, Ms,
                            optical=optical, nIR=nIR)
 
     # Estimate Nrv for this TESS planet
@@ -249,15 +249,47 @@ def _get_prot(Teff, seed=None):
 
 
  
-def _get_magnitudes(band_strs, known_mags, Teff, logg, Z,
+def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms,
                     optical=False, nIR=False):
     '''
     Get the stellar apparent magnitude in all bands of interest and normalized 
     by the known magnitudes from Sullivan et al 2015.
+
+    Parameters
+    ----------
+    `band_strs': list of strs
+        A list of the spectral bands that span the wavelength coverage of the 
+        spectrograph used to measure the radial velocities of the TESS star. 
+        All band_strs entries must be in ['u','b','v','r','i','Y','J','H','K']
+        and at least one of ['v','i','J','K'] must be included for scaling of 
+        the TESS stars from Sullivan
+    `known_mags': list of scalars
+        A list of the V, I, J, and K stellar apparent magnitudes from Sullivan
+    `Teff': scalar
+        The stellar effective temperature in Kelvin
+    `logg': scalar
+        The stellar logg in cgs units
+    `Z': scalar
+        The stellar metallicity [Fe/H] in solar units
+    `optical': boolean
+        Flag the spectrograph as operating in the optical
+    `nIR': boolean
+        Flag the spectrograph as operating in the near infrared
+
+    Returns
+    -------
+    `mags': numpy.array
+        Array of the stellar magnitudes for the star based on its spectrum and 
+        scaled to the known magnitudes from Sullivan
+
     '''
     # Get the full spectrum
-    wl = get_wavelengthgrid()
-    _, spectrum = get_full_spectrum(Teff, logg, Z)
+    ##wl = get_wavelengthgrid()
+    ##_, spectrum = get_full_spectrum(Teff, logg, Z)
+
+    # Use isochrone colours to compute mags in each band of interest
+    # solar metallicity at a fixed age of 10^9 yrs
+    Mu,Mb,Mv,Mr,Mi,Mj,Mh,Mk = _get_absolute_stellar_magnitudes(Ms)
 
     # Get reference magnitude
     if optical:
@@ -268,30 +300,31 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z,
     Vmag, Imag, Jmag, Kmag = known_mags
     if optical:  # optical bands
         if 'v' in band_strs:
-            ref_band, ref_mag = 'v', Vmag
+            ref_band, ref_mag, ref_absmag = 'v', Vmag, Mv
         elif 'i' in band_strs:
-            ref_band, ref_mag = 'i', Imag
+            ref_band, ref_mag, ref_absmag = 'i', Imag, Mi
         else:
             raise ValueError('Do not have an optical reference magnitude ' + \
                              "in `band_strs'. Must include wither v or i.")
 
     else:  # nIR bands
         if 'J' in band_strs:
-            ref_band, ref_mag = 'J', Jmag
+            ref_band, ref_mag, ref_absmag = 'J', Jmag, Mj
         elif 'K' in band_strs:
-            ref_band, ref_mag = 'K', Kmag
+            ref_band, ref_mag, ref_absmag = 'K', Kmag, Mk
         else:
             raise ValueError('Do not have a nIR reference magnitude ' + \
                              "in `band_strs'. Must include either J or K.")
         
     # Integrate the spectrum over each band of interest to get flux
-    fluxes = np.zeros(len(band_strs))
+    '''fluxes = np.zeros(len(band_strs))
     for i in range(fluxes.size):
 
         # Get total flux over the bandpass
         wlmin, wlmax,_ = get_band_range(band_strs[i])
         g = (wl >= wlmin) & (wl <= wlmax)
         wl2, spectrum2 = wl[g], spectrum[g]
+        #spectrum2 = cgs2Nphot(wl, spectrum, wl2, spectrum[g])
         fluxes[i] = np.sum(spectrum2)
 
         # Get reference flux
@@ -299,9 +332,61 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z,
             ref_flux = fluxes[i]
 
     # Convert to magnitudes
-    mag  = -2.5*np.log10(fluxes / ref_flux) + ref_mag
+    mags = -2.5*np.log10(fluxes / ref_flux) + ref_mag'''
 
-    return mag
+    mags = np.zeros(len(band_strs))
+    for i in range(mags.size):
+        if band_strs[i] == 'u':
+            absmag = Mu
+        elif band_strs[i] == 'b':
+            absmag = Mb
+        elif band_strs[i] == 'v':
+            absmag = Mv
+        elif band_strs[i] == 'r':
+            absmag = Mr
+        elif band_strs[i] == 'i':
+            absmag = Mi
+        elif band_strs[i] == 'J':
+            absmag = Mj
+        elif band_strs[i] == 'H':
+            absmag = Mh
+        elif band_strs[i] == 'K':
+            absmag = Mk
+        else:
+            raise ValueError('Unknown passband: %s'%band_strs[i])
+        mags[i] = ref_mag - ref_absmag + absmag
+
+    return mags
+
+
+def _get_absolute_stellar_magnitudes(Ms, logage=9):
+    '''
+    Get the absolute magnitudes of a star with a given stellar mass at a 
+    given age using the isochrones from 2005A&A...436..895G
+
+    Parameters
+    ----------
+    `Ms': scalar
+        The stellar mass in MSun
+    `logage': scalar
+        The log base 10 of the age of the star in years
+
+    Returns
+    -------
+    `mags': numpy.array
+        The absolute magnitudes of the star 
+
+    '''
+    logages,Mss,Mus,Mbs,Mvs,Mrs,Mis,Mjs,Mhs,Mks = \
+                                np.loadtxt('input_data/isoc_z019.dat',
+                                usecols=(0,1,7,8,9,10,11,12,13,14)).T
+    g = logages == 9
+    Mss,Mus,Mbs,Mvs,Mrs,Mis,Mjs,Mhs,Mks = Mss[g],Mus[g],Mbs[g],Mvs[g],Mrs[g], \
+                                          Mis[g],Mjs[g],Mhs[g],Mks[g]
+    g = abs(Mss-Ms) == np.min(abs(Mss-Ms))
+    Mu,Mb,Mv,Mr,Mi,Mj,Mh,Mk = Mus[g],Mbs[g],Mvs[g],Mrs[g],Mis[g],Mjs[g], \
+                              Mhs[g],Mks[g]
+    return Mu, Mb, Mv, Mr, Mi, Mj, Mh, Mk 
         
 
 def get_planet_mass(rp):
@@ -378,7 +463,7 @@ def get_sigmaK_target_v2(K):
 
 # GJ1132: mags=array([ 16.44372851,  13.53664024,  13.04561156,  12.3])
 def TEST_estimate_Nrv_TESS(mags=[16.4, 13.5, 13.0, 12.3],
-                           band_strs=['u','g','r','i'],
+                           band_strs=['u','b','v','r','i'],
                            Teff_round=3300, logg_round=5, vsini=.01, rp=1.1,
                            mp=1.6, K=2.8, R=1e5, aperture_m=3.6, QE=.1, Z=0,
                            sigmaRV_activity=0., protseed=None):
