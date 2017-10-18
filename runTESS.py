@@ -212,7 +212,7 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
     Nrv = int(np.round(2 * (sigmaRV_eff / sigmaK_target)**2))
 
     toverhead = 5.
-    tobserving = (texp+overhead)*Nrv
+    tobserving = (texp+toverhead)*Nrv
     
     return Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff
 
@@ -452,7 +452,7 @@ def get_sigmaK_target_v2(K):
 
 # GJ1132: mags=array([ 16.44372851,  13.53664024,  13.04561156,  12.3])
 def TEST_estimate_Nrv_TESS(mags=[16.4, 13.5, 13.0, 12.3],
-                           band_strs=['U','B','V','R','I'],
+                           band_strs=['U','V','R','I'],
                            Teff_round=3300, logg_round=5, vsini=.01, rp=1.1,
                            mp=1.6, K=2.8, R=1e5, aperture_m=3.6, QE=.1, Z=0,
                            sigmaRV_activity=0., protseed=None):

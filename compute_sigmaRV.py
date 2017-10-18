@@ -448,53 +448,6 @@ def _get_snr(mag, band_str, texp_min, aperture_m, QE, R):
     return SNR
 
 
-def _remove_tellurics_from_W(wl_band, W, transmission_threshold=.02):
-    '''
-    Remove wavelengths that are sampled at wavelengths affected by tellurics at the 
-    level more than a specified threshold.
-
-    Parameters
-    ----------
-    `wl_band': array-like
-        Spectral array of wavelengths in microns
-    `W': array-like
-        Spectral weighting function from Eq. X in Bouchy et al 2001 in Nphot/s/cm^2/cm
-    `transmission_threshold': scalar
-        Maximum fraction absorption from tellurics. Only keep where transmission is 
-        greater than 1-`transmission_threshold'
-
-    Returns
-    -------
-    `Wout': numpy.array()
-        Spectral weighting function only where the atmospheric transmission is 
-        favourable
-
-    '''
-    assert wl_band.size == W.size
-    wlTAPAS, transTAPAS = np.loadtxt('input_data/tapas_000001.ipac', \
-                                     skiprows=23).T
-    wlTAPAS *= 1e-3
-
-    # remove rayleigh continuum via boxcar smoothing if passband is in that regime
-    if np.any(wl_band <=.8):
-        boxsteps = np.arange(wlTAPAS.min(), wlTAPAS.max(), 1e-2)
-        transTAPAS_continuum = np.zeros(boxsteps.size-1)
-    	for i in range(boxsteps.size-1):
-	    transTAPAS_continuum[i] = np.max(transTAPAS[(wlTAPAS >= boxsteps[i]) \
-                                                        & (wlTAPAS <= boxsteps[i+1])])
-	fint = interp1d(boxsteps[1:]-np.diff(boxsteps)[0]*.5, transTAPAS_continuum, \
-                        bounds_error=False, fill_value=.878)
-	transTAPAS = transTAPAS - fint(wlTAPAS) + 1.
-
-    # resample the wavelength grid
-    fint = interp1d(wlTAPAS, transTAPAS)
-    transmission = fint(wl_band)
-
-    # only keep where transmission > 1-threshold
-    notellurics = np.where(transmission > (1.-transmission_threshold))[0]
-    return W[notellurics]
-
-
 def exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
                                       texpmin=10, texpmax=60, SNRtarget=200):
     '''
@@ -535,7 +488,7 @@ def exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
         particular reference band (either 'V' or 'J')
 
     '''
-    band_strs = np.ascontiguousarray(band_strs)
+    mags, band_strs = np.ascontiguousarray(mags), np.ascontiguousarray(band_strs)
     if 'V' in band_strs:
         reference_band = 'V'
     elif 'J' in band_strs:
@@ -544,7 +497,7 @@ def exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
         raise ValueError("No reference band. Neither 'V' nor 'J' are included " + \
                          'in band_strs.')
     reference_mag = float(mags[band_strs == reference_band])
-
+    
     texps = np.arange(texpmin, texpmax+.1, .1)  # minutes
     SNRs = np.zeros(texps.size)
     for i in range(texps.size):
@@ -552,6 +505,53 @@ def exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
 
     g = abs(SNRs-SNRtarget) == abs(SNRs-SNRtarget).min()
     return texps[g].min()
+
+
+def _remove_tellurics_from_W(wl_band, W, transmission_threshold=.02):
+    '''
+    Remove wavelengths that are sampled at wavelengths affected by tellurics at the 
+    level more than a specified threshold.
+
+    Parameters
+    ----------
+    `wl_band': array-like
+        Spectral array of wavelengths in microns
+    `W': array-like
+        Spectral weighting function from Eq. X in Bouchy et al 2001 in Nphot/s/cm^2/cm
+    `transmission_threshold': scalar
+        Maximum fraction absorption from tellurics. Only keep where transmission is 
+        greater than 1-`transmission_threshold'
+
+    Returns
+    -------
+    `Wout': numpy.array()
+        Spectral weighting function only where the atmospheric transmission is 
+        favourable
+
+    '''
+    assert wl_band.size == W.size
+    wlTAPAS, transTAPAS = np.loadtxt('input_data/tapas_000001.ipac', \
+                                     skiprows=23).T
+    wlTAPAS *= 1e-3
+
+    # remove rayleigh continuum via boxcar smoothing if passband is in that regime
+    if np.any(wl_band <=.8):
+        boxsteps = np.arange(wlTAPAS.min(), wlTAPAS.max(), 1e-2)
+        transTAPAS_continuum = np.zeros(boxsteps.size-1)
+    	for i in range(boxsteps.size-1):
+	    transTAPAS_continuum[i] = np.max(transTAPAS[(wlTAPAS >= boxsteps[i]) \
+                                                        & (wlTAPAS <= boxsteps[i+1])])
+	fint = interp1d(boxsteps[1:]-np.diff(boxsteps)[0]*.5, transTAPAS_continuum, \
+                        bounds_error=False, fill_value=.878)
+	transTAPAS = transTAPAS - fint(wlTAPAS) + 1.
+
+    # resample the wavelength grid
+    fint = interp1d(wlTAPAS, transTAPAS, bounds_error=False, fill_value=0)
+    transmission = fint(wl_band)
+
+    # only keep where transmission > 1-threshold
+    notellurics = np.where(transmission > (1.-transmission_threshold))[0]
+    return W[notellurics]
 
 
 def _compute_W(wl_band, spec_band):
