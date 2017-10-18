@@ -59,6 +59,9 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
         planet's mass at a given significance
     `texp': float
         The exposure time in minutes for each radial velocity measurement
+    `tobserving': float
+        The total observing time in minutes including a constant estimate of 
+        overheads
     `sigmaRV_phot': float
         The photon-noise limit on the RV measurement precision in m/s
     `sigmaRV_eff': float
@@ -169,17 +172,20 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
 
     Returns
     -------
+    `Nrv': int
+        The number of radial velocity measurements required to detect the TESS 
+        planet's mass at a given significance
     `texp': float
         The exposure time in minutes for each radial velocity measurement
+    `tobserving': float
+        The total observing time in minutes including a constant estimate of 
+        overheads
     `sigmaRV_phot': float
         The photon-noise limit on the RV measurement precision in m/s
     `sigmaRV_eff': float
         The effective RV measurement precision from the combined effects of 
         photon-noise, instrument stability, multiple planets, and stellar 
         activity in m/s
-    `Nrv': int
-        The number of radial velocity measurements required to detect the TESS 
-        planet's mass at a given significance
 
     '''
     mags, Teff_round, logg_round, Z, vsini = startheta
@@ -447,7 +453,7 @@ def get_sigmaK_target_v1(rp, K, P, Ms, sigP=5e-5,
 
 
 def get_sigmaK_target_v2(K):
-    return .13 * K
+    return .33 * K
 
 
 # GJ1132: mags=array([ 16.44372851,  13.53664024,  13.04561156,  12.3])
@@ -455,17 +461,19 @@ def TEST_estimate_Nrv_TESS(mags=[16.4, 13.5, 13.0, 12.3],
                            band_strs=['U','V','R','I'],
                            Teff_round=3300, logg_round=5, vsini=.01, rp=1.1,
                            mp=1.6, K=2.8, R=1e5, aperture_m=3.6, QE=.1, Z=0,
-                           sigmaRV_activity=0., protseed=None):
+                           sigmaRV_activity=3.4):
     startheta = mags, float(Teff_round), float(logg_round), Z, vsini
     planettheta = rp, mp, K
     instrumenttheta = band_strs, R, aperture_m, QE
-    Nrv, texp, tobserving, sigmaRV, sigmaRV_eff = \
+    Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff = \
                         _estimate_Nrv(startheta, planettheta, instrumenttheta,
                                       sigmaRV_activity=sigmaRV_activity)
-    print '\nExposure time = %.3f min'%texp
-    print 'Photon-noise limited RV uncertainty = %.3f m/s'%sigmaRV
-    print 'Effective RV uncertainty = %.3f m/s'%sigmaRV_eff
-    print 'Number of RVs = %i'%Nrv
+    print '\n%35s = %.3f m/s'%('Photon-noise limited RV uncertainty',
+                               sigmaRV_phot)
+    print '%35s = %.3f m/s'%('Effective RV uncertainty', sigmaRV_eff)
+    print '%35s = %i'%('Number of RVs', Nrv)
+    print '%35s = %.3f minutes'%('Exposure time', texp)
+    print '%35s = %.3f minutes'%('Total observing time', tobserving)
 
 
 # GJ 1214:
