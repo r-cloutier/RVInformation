@@ -8,12 +8,12 @@ import pylab as plt
 import astropy.io.fits as fits
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.interpolate import interp1d, UnivariateSpline
-from PyAstronomy.pyasl import broadGaussFast, rotBroad
+#from PyAstronomy.pyasl import broadGaussFast, rotBroad
 
 
 global c, h, SNRreference, bands
 c, h, SNRreference = 299792458., 6.62607004e-34, 1e2
-bands = ['u','b','v','r','i','Y','J','H','K']
+bands = ['U','B','V','R','I','Z','Y','J','H','K']
 
 
 def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
@@ -34,7 +34,7 @@ def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
         The projected stellar rotation velocity in km/s
     `band_str': str
         The letter designating the spectral band under consideration. Must be 
-        in ['u','b','v','r','i','Y','J','H','K']
+        in ['U','B','V','R','I','Z','Y','J','H','K']
     `R': scalar
         The spectral resolution of the spectrograph (lambda / d_lambda)
     `pltt': boolean
@@ -127,7 +127,7 @@ def _convolve_band_spectrum(wl_microns, spectrum, band_str, R, pltt=False):
         Stellar spectrum array in erg/s/cm^2/cm
     `band_str': str
         The letter designating the spectral band under consideration. Must be 
-        in ['u','b','v','r','i','Y','J','H','K']
+        in ['U','B','V','R','I','Z','Y','J','H','K']
     `R': scalar
         The spectral resolution of the spectrograph (lambda / d_lambda)
     `pltt': boolean
@@ -159,8 +159,11 @@ def _convolve_band_spectrum(wl_microns, spectrum, band_str, R, pltt=False):
     FWHM_microns = wl_central_microns / float(R)
     sigma_microns = FWHM_microns / (2*np.sqrt(2*np.log(2)))
     print '\nConvolving the stellar spectrum to the instrumental resolution...'
-    spectrum_conv = broadGaussFast(wl_band, spectrum_band, sigma_microns)
-    
+    try:
+        spectrum_conv = broadGaussFast(wl_band, spectrum_band, sigma_microns)
+    except NameError: # no convolution is bad
+        spectrum_conv = spectrum_band
+        
     if pltt:
         plt.plot(wl_band, spectrum_band, 'k-', label='Full')
         plt.plot(wl_band, spectrum_conv, 'b-', label='Convolved')
@@ -185,7 +188,7 @@ def _rotational_convolution(wl_band, spec_band, vsini, epsilon=0.6,
         Stellar spectrum array in erg/s/cm^2/cm
     `band_str': str
         The letter designating the spectral band under consideration. Must be 
-        in ['u','b','v','r','i','Y','J','H','K']
+        in ['U','B','V','R','I','Z','Y','J','H','K']
     `R': scalar
         The spectral resolution of the spectrograph (lambda / d_lambda)
     `pltt': boolean
@@ -200,8 +203,11 @@ def _rotational_convolution(wl_band, spec_band, vsini, epsilon=0.6,
 
     '''
     print '\nConvolving the stellar spectrum with a rotational profile...'
-    spec_conv = rotBroad(wl_band, spec_band, epsilon, vsini)
-
+    try:
+        spec_conv = rotBroad(wl_band, spec_band, epsilon, vsini)
+    except NameError:   # no convolution is bad
+        spec_conv = spec_band
+        
     if pltt:
         plt.plot(wl_band, spec_band, 'k-', label='Original')
         plt.plot(wl_band, spec_conv, 'b-', label='Rotationally convolved')
@@ -242,7 +248,7 @@ def get_band_range(band_str):
     ----------
     `band_str': str
         The letter designating the spectral band under consideration. Must be 
-        in ['u','b','v','r','i','Y','J','H','K']
+        in ['U','B','V','R','I','Z','Y','J','H','K']
 
     Returns
     -------
@@ -257,15 +263,15 @@ def get_band_range(band_str):
     '''
     # bin widths are chosen to have the same number of wavelength elements
     # per band for flux normalization purposes
-    if band_str == 'u':
+    if band_str == 'U':
         wlmin, wlmax, wlcentral = 0.31, 0.42, .3656
-    elif band_str == 'b':
+    elif band_str == 'B':
         wlmin, wlmax, wlcentral = 0.37, 0.59, .4353    
-    elif band_str == 'v':
+    elif band_str == 'V':
         wlmin, wlmax, wlcentral = 0.47, 0.70, .5477
-    elif band_str == 'r':
+    elif band_str == 'R':
         wlmin, wlmax, wlcentral = 0.54, 0.87, .6349
-    elif band_str == 'i':
+    elif band_str == 'I':
         wlmin, wlmax, wlcentral = 0.70, 1.13, .8797
     elif band_str == 'Y':
         wlmin, wlmax, wlcentral = 1.0, 1.1, 1.02
@@ -335,7 +341,7 @@ def _rescale_sigmaRV(sigmaRV, mag, band_str, texp_min, aperture_m, QE, R):
         The stellar magnitude in spectral band given in `band_str'
     `band_str': str
         The letter designating the spectral band under consideration. Must be 
-        in ['u','b','v','r','i','Y','J','H','K']
+        in ['U','B','V','R','I','Z','Y','J','H','K']
     `texp_min': scalar
         The integration time in minutes
     `aperture_m': float
@@ -365,7 +371,7 @@ def _get_snr(mag, band_str, texp_min, aperture_m, QE, R):
         The stellar magnitude in spectral band given in `band_str'
     `band_str': str
         The letter designating the spectral band under consideration. Must be 
-        in ['u','b','v','r','i','Y','J','H','K']
+        in ['U','B','V','R','I','Z','Y','J','H','K']
     `texp_min': scalar
         The integration time in minutes
     `aperture_m': float
@@ -391,19 +397,26 @@ def _get_snr(mag, band_str, texp_min, aperture_m, QE, R):
 
     # Get flux density zeropoint (for m=0) in ergs s^-1 A^-1 cm^-2,
     # wavelength in angstroms and bandwidth in microns
-    if band_str == 'u':
-        Fl = 3.639e-9
+    # http://personal.psu.edu/rbc3/A501/oconnell.pdf
+    if band_str == 'U':
+        Fl = 417.5e-11
         l  = 3594.93
-    elif band_str == 'g':
+    elif band_str == 'B':
+        Fl = 632e-11
+        l  = 4380.
+    elif band_str == 'V':
+        Fl = 363.1e-11
+        l  = 5450.
+    elif band_str == 'G':
         Fl = 5.521e-9
         l  = 4640.42
-    elif band_str == 'r':
+    elif band_str == 'R':
         Fl = 2.529e-9
         l  = 6122.33
-    elif band_str == 'i':
+    elif band_str == 'I':
         Fl = 1.409e-9
         l  = 7439.49
-    elif band_str == 'z':
+    elif band_str == 'Z':
         Fl = 8.501e-10
         l  = 8897.06
     elif band_str == 'Y':
@@ -482,20 +495,63 @@ def _remove_tellurics_from_W(wl_band, W, transmission_threshold=.02):
     return W[notellurics]
 
 
-def exposure_time_calculator_per_band(mag, band_str, aperture_m, QE, R,
-                                      texpmin=10, texpmax=60, SNRtarget=150):
+def exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
+                                      texpmin=10, texpmax=60, SNRtarget=200):
     '''
-    Compute the exposure time to recieve a SNR target per resolution element in 
-    a particular band.
+    Compute the exposure time required to reach a target SNR per resolution element in 
+    a particular band. Either V for visible spectrographs or J for nIR spectrographs.
+    
+    Parameters
+    ----------
+    `mags': list of scalars
+        A list of the stellar magnitudes for the star in each spectral band
+    `band_strs': list of strs
+        A list of the spectral bands that span the wavelength coverage of the 
+        spectrograph used to measure the radial velocities of the TESS star. 
+        All band_strs entries must be in 
+        ['U','B','V','R','I','Z','Y','J','H','K']
+        and at least one of ['V','J'] as a reference band
+    `aperture_m': float
+        The telescope's aperture diameter in meters
+    `QE': scalar
+        The quantum efficiency of the detector (0<QE<=1)
+    `R': scalar
+        The spectral resolution of the spectrograph (lambda / d_lambda)
+    `texpmin': scalar
+        The minimum exposure time in minutes. Required to mitigate the effects 
+        of stellar pulsations and granulation
+    `texpmax': scalar
+        The maximum exposure time in minutes. Used to moderate the limit the 
+        observational time that can be dedicated to a single star
+    `SNRtarget': scalar
+        The target signal-to-noise ratio per resolution element that needs to 
+        be achieved during the integration. This is applied to a reference band 
+        determined by the bands included in `band_strs' and is either 'v' or 'J'
+
+    Returns
+    -------
+    `texp': float
+        The minimum exposure time in minutes required to achieve a desired SNR in a 
+        particular reference band (either 'v' or 'J')
+
     '''
+    band_strs = np.ascontiguousarray(band_strs)
+    if 'v' in band_strs:
+        reference_band = 'v'
+    elif 'J' in band_strs:
+        reference_band = 'J'
+    else:
+        raise ValueError("No reference band. Neither 'v' nor 'J' are included " + \
+                         'in band_strs.')
+    reference_mag = float(mags[band_strs == reference_band])
+
     texps = np.arange(texpmin, texpmax+.1, .1)  # minutes
     SNRs = np.zeros(texps.size)
     for i in range(texps.size):
-        SNRs[i] = _get_snr(mag, band_str, texps[i], aperture_m, QE, R)
+        SNRs[i] = _get_snr(reference_mag, reference_band, texps[i], aperture_m, QE, R)
 
     g = abs(SNRs-SNRtarget) == abs(SNRs-SNRtarget).min()
     return texps[g].min()
-
 
 
 def _compute_W(wl_band, spec_band):
@@ -504,8 +560,8 @@ def _compute_W(wl_band, spec_band):
     from Bouchy+2001.
     '''
     # over-sample the spectrum
-    wl2 = np.linspace(wl.min(), wl.max(), wl.size*10)
-    fint = interp1d(wl, spec)
+    wl2 = np.linspace(wl_band.min(), wl_band.max(), wl_band.size*10)
+    fint = interp1d(wl_band, spec_band)
     A = fint(wl2)
 
     # compute W
@@ -514,7 +570,7 @@ def _compute_W(wl_band, spec_band):
     
     # resample W
     fint = interp1d(wl2, W)
-    return fint(wl)
+    return fint(wl_band)
 
 
 def compute_sigmaRV(wl, spec, mag, band_str, texp_min=5, aperture_m=3.58,

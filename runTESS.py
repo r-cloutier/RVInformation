@@ -30,8 +30,9 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     `band_strs': list of strs
         A list of the spectral bands that span the wavelength coverage of the 
         spectrograph used to measure the radial velocities of the TESS star. 
-        All band_strs entries must be in ['u','b','v','r','i','Y','J','H','K']
-        and at least one of ['v','i','J','K'] must be included for scaling of 
+        All band_strs entries must be in 
+        ['U','B','V','R','I','Z','Y','J','H','K']
+        and at least one of ['V','I','J','K'] must be included for scaling of 
         the TESS stars from Sullivan
     `R': scalar
         The spectral resolution of the spectrograph (lambda / d_lambda)
@@ -99,38 +100,34 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     I = abs(np.arccos(np.random.uniform(-1,1)))
     vsini = 2*np.pi * rvs.Rsun2m(Rs)*1e-3 * np.sin(I) / rvs.days2sec(Prot)
 
-    # optical or nIR bands?
-    optical = True if np.any([band.islower() for band in band_strs]) else False
-    nIR = not optical
-
     # Get the stellar magnitudes in the desired bands scaled to the results
     # from Sullivan
     known_mags = [Vmag, Imag, Jmag, Kmag]
-    mags = _get_magnitudes(band_strs, known_mags, Teff_round, logg_round, Z, Ms,
-                           optical=optical, nIR=nIR)
+    mags = _get_magnitudes(band_strs, known_mags, Teff_round, logg_round, Z, Ms)
 
     # Estimate Nrv for this TESS planet
     startheta = mags, float(Teff_round), float(logg_round), Z, vsini
     planettheta = rp, mp, K
     instrumenttheta = band_strs, R, aperture_m, QE
-    texp, sigmaRV_phot, sigmaRV_eff, Nrv = _estimate_Nrv(startheta, planettheta,
-                                                         instrumenttheta,
-                                        sigmaRV_activity=sigmaRV_activity,
-                                        sigmaRV_noisefloor=sigmaRV_noisefloor)
+    Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff = \
+                    _estimate_Nrv(startheta, planettheta, instrumenttheta,
+                                  sigmaRV_activity=sigmaRV_activity,
+                                  sigmaRV_noisefloor=sigmaRV_noisefloor)
 
     if verbose:
-        print '\n%35s = %.3f minutes'%('Exposure time', texp)
-        print '%35s = %.3f m/s'%('Photon-noise limited RV uncertainty',
+        print '\n%35s = %.3f m/s'%('Photon-noise limited RV uncertainty',
                                  sigmaRV_phot)
         print '%35s = %.3f m/s'%('Effective RV uncertainty', sigmaRV_eff)
         print '%35s = %i'%('Number of RVs', Nrv)
+        print '%35s = %.3f minutes'%('Exposure time', texp)
+        print '%35s = %.3f minutes'%('Total observing time', tobserving)
     
-    return Nrv, texp, sigmaRV_phot, sigmaRV_eff
-
+    return Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff
 
 
 def _estimate_Nrv(startheta, planettheta, instrumenttheta,
-                  sigmaRV_activity=0., sigmaRV_noisefloor=.5):
+                  sigmaRV_activity=0., sigmaRV_noisefloor=.5, texpmin=10,
+                  texpmax=60, SNRtarget=200):
     '''
     Estimate the number of RVs required to measure the semiamplitude K at a 
     given signficance of a particular planet around a particular star.
@@ -159,6 +156,16 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
         An additive source of RV uncertainty from RV activity or jitter in m/s. 
         To be added in quadrature to the photon-noise RV precision derived for 
         the TESS star
+    `texpmin': scalar
+        The minimum exposure time in minutes. Required to mitigate the effects 
+        of stellar pulsations and granulation
+    `texpmax': scalar
+        The maximum exposure time in minutes. Used to moderate the limit the 
+        observational time that can be dedicated to a single star
+    `SNRtarget': scalar
+        The target signal-to-noise ratio per resolution element that needs to 
+        be achieved during the integration. This is applied to a reference band 
+        determined by the bands included in `band_strs' and is either 'v' or 'J'
 
     Returns
     -------
@@ -179,17 +186,14 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
     rp, mp, K = planettheta
     band_strs, R, aperture_m, QE = instrumenttheta
     
-    # compute texp in each band
-    texps = np.zeros(len(mags))
-    for i in range(texps.size):
-        wl, spec = get_reduced_spectrum(Teff_round, logg_round, Z, vsini,
-                                        band_strs[i], R)
-        texps[i] = exposure_time_calculator_per_band(mags[i], band_strs[i],
-                                                     aperture_m, QE, R)
-    texp = np.median(texps)
+    # compute texp in a reference band (either v or J)
+    texp = exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE,
+                                             R, texpmin=texpmin,
+                                             texpmax=texpmax,
+                                             SNRtarget=SNRtarget)
 
     # compute sigmaRV in each band for a fixed texp
-    sigmaRVs = np.zeros(texps.size)
+    sigmaRVs = np.zeros(len(mags))
     for i in range(sigmaRVs.size):
         wl, spec = get_reduced_spectrum(Teff_round, logg_round, Z, vsini,
                                         band_strs[i], R)
@@ -207,9 +211,10 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
     sigmaK_target = get_sigmaK_target_v2(K)
     Nrv = int(np.round(2 * (sigmaRV_eff / sigmaK_target)**2))
 
-    # Return exposure time in minutes, photon-noise limit on sigmaRV,
-    # the effective sigmaRV (plus activity and planets), and the number of RVs
-    return texp, sigmaRV_phot, sigmaRV_eff, Nrv
+    toverhead = 5.
+    tobserving = (texp+overhead)*Nrv
+    
+    return Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff
 
 
 
@@ -249,8 +254,7 @@ def _get_prot(Teff, seed=None):
 
 
  
-def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms,
-                    optical=False, nIR=False):
+def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms):
     '''
     Get the stellar apparent magnitude in all bands of interest and normalized 
     by the known magnitudes from Sullivan et al 2015.
@@ -260,8 +264,9 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms,
     `band_strs': list of strs
         A list of the spectral bands that span the wavelength coverage of the 
         spectrograph used to measure the radial velocities of the TESS star. 
-        All band_strs entries must be in ['u','b','v','r','i','Y','J','H','K']
-        and at least one of ['v','i','J','K'] must be included for scaling of 
+        All band_strs entries must be in 
+        ['U','B','V','R','I','Z','Y','J','H','K']
+        and at least one of ['V','I','J','K'] must be included for scaling of 
         the TESS stars from Sullivan
     `known_mags': list of scalars
         A list of the V, I, J, and K stellar apparent magnitudes from Sullivan
@@ -271,11 +276,7 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms,
         The stellar logg in cgs units
     `Z': scalar
         The stellar metallicity [Fe/H] in solar units
-    `optical': boolean
-        Flag the spectrograph as operating in the optical
-    `nIR': boolean
-        Flag the spectrograph as operating in the near infrared
-
+    
     Returns
     -------
     `mags': numpy.array
@@ -291,30 +292,18 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms,
     # solar metallicity at a fixed age of 10^9 yrs
     Mu,Mb,Mv,Mr,Mi,Mj,Mh,Mk = _get_absolute_stellar_magnitudes(Ms)
 
-    # Get reference magnitude
-    if optical:
-        nIR = False
-    elif not nIR:
-        raise ValueError("One of `optical' or `nIR' keyword arguments " + \
-                         "must be set to True.")
     Vmag, Imag, Jmag, Kmag = known_mags
-    if optical:  # optical bands
-        if 'v' in band_strs:
-            ref_band, ref_mag, ref_absmag = 'v', Vmag, Mv
-        elif 'i' in band_strs:
-            ref_band, ref_mag, ref_absmag = 'i', Imag, Mi
-        else:
-            raise ValueError('Do not have an optical reference magnitude ' + \
-                             "in `band_strs'. Must include wither v or i.")
-
-    else:  # nIR bands
-        if 'J' in band_strs:
-            ref_band, ref_mag, ref_absmag = 'J', Jmag, Mj
-        elif 'K' in band_strs:
-            ref_band, ref_mag, ref_absmag = 'K', Kmag, Mk
-        else:
-            raise ValueError('Do not have a nIR reference magnitude ' + \
-                             "in `band_strs'. Must include either J or K.")
+    if 'v' in band_strs:
+        ref_band, ref_mag, ref_absmag = 'v', Vmag, Mv
+    elif 'J' in band_strs:
+        ref_band, ref_mag, ref_absmag = 'J', Jmag, Mj
+    elif 'i' in band_strs:
+        ref_band, ref_mag, ref_absmag = 'i', Imag, Mi
+    elif 'K' in band_strs:
+        ref_band, ref_mag, ref_absmag = 'K', Kmag, Mk
+    else:
+        raise ValueError('Do not have a reference magnitude ' + \
+                         "in `band_strs'. Must include one of v, i, J or K.")
         
     # Integrate the spectrum over each band of interest to get flux
     '''fluxes = np.zeros(len(band_strs))
@@ -336,15 +325,15 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms,
 
     mags = np.zeros(len(band_strs))
     for i in range(mags.size):
-        if band_strs[i] == 'u':
+        if band_strs[i] == 'U':
             absmag = Mu
-        elif band_strs[i] == 'b':
+        elif band_strs[i] == 'B':
             absmag = Mb
-        elif band_strs[i] == 'v':
+        elif band_strs[i] == 'V':
             absmag = Mv
-        elif band_strs[i] == 'r':
+        elif band_strs[i] == 'R':
             absmag = Mr
-        elif band_strs[i] == 'i':
+        elif band_strs[i] == 'I':
             absmag = Mi
         elif band_strs[i] == 'J':
             absmag = Mj
@@ -463,16 +452,16 @@ def get_sigmaK_target_v2(K):
 
 # GJ1132: mags=array([ 16.44372851,  13.53664024,  13.04561156,  12.3])
 def TEST_estimate_Nrv_TESS(mags=[16.4, 13.5, 13.0, 12.3],
-                           band_strs=['u','b','v','r','i'],
+                           band_strs=['U','B','V','R','I'],
                            Teff_round=3300, logg_round=5, vsini=.01, rp=1.1,
                            mp=1.6, K=2.8, R=1e5, aperture_m=3.6, QE=.1, Z=0,
                            sigmaRV_activity=0., protseed=None):
     startheta = mags, float(Teff_round), float(logg_round), Z, vsini
     planettheta = rp, mp, K
     instrumenttheta = band_strs, R, aperture_m, QE
-    texp, sigmaRV, sigmaRV_eff, Nrv = _estimate_Nrv(startheta, planettheta,
-                                                    instrumenttheta,
-                                            sigmaRV_activity=sigmaRV_activity)
+    Nrv, texp, tobserving, sigmaRV, sigmaRV_eff = \
+                        _estimate_Nrv(startheta, planettheta, instrumenttheta,
+                                      sigmaRV_activity=sigmaRV_activity)
     print '\nExposure time = %.3f min'%texp
     print 'Photon-noise limited RV uncertainty = %.3f m/s'%sigmaRV
     print 'Effective RV uncertainty = %.3f m/s'%sigmaRV_eff
