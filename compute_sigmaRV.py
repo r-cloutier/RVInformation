@@ -626,4 +626,5 @@ def compute_sigmaRV(wl_band, spec_band, mag, band_str, texp, aperture_m, QE, R):
     sigmaRV = c / np.sqrt(np.sum(W_clean[g]))
     sigmaRV_scaled = _rescale_sigmaRV(sigmaRV, mag, band_str, texp,
                                       aperture_m, QE, R)
+    print sigmaRV, sigmaRV_scaled
     return sigmaRV_scaled
