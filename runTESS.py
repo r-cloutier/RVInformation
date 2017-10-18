@@ -107,7 +107,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     # from Sullivan
     known_mags = [Vmag, Imag, Jmag, Kmag]
     mags = _get_magnitudes(band_strs, known_mags, Teff_round, logg_round, Z, Ms)
-
+    
     # Estimate Nrv for this TESS planet
     startheta = mags, float(Teff_round), float(logg_round), Z, vsini
     planettheta = rp, mp, K
@@ -119,7 +119,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
 
     if verbose:
         print '\n%35s = %.3f m/s'%('Photon-noise limited RV uncertainty',
-                                 sigmaRV_phot)
+                                   sigmaRV_phot)
         print '%35s = %.3f m/s'%('Effective RV uncertainty', sigmaRV_eff)
         print '%35s = %i'%('Number of RVs', Nrv)
         print '%35s = %.3f minutes'%('Exposure time', texp)
@@ -191,6 +191,9 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
     mags, Teff_round, logg_round, Z, vsini = startheta
     rp, mp, K = planettheta
     band_strs, R, aperture_m, QE = instrumenttheta
+    mags, band_strs = np.ascontiguousarray(mags), \
+                      np.ascontiguousarray(band_strs)
+    assert mags.size == band_strs.size
     
     # compute texp in a reference band (either v or J)
     texp = exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE,
@@ -456,12 +459,12 @@ def get_sigmaK_target_v2(K):
     return .33 * K
 
 
-# GJ1132: mags=array([ 16.44372851,  13.53664024,  13.04561156,  12.3])
-def TEST_estimate_Nrv_TESS(mags=[16.4, 13.5, 13.0, 12.3],
-                           band_strs=['U','V','R','I'],
+# GJ1132: mags=array([15.25, 13.52]), ['B','V']
+def TEST_estimate_Nrv_TESS(mags=[15.25, 13.52],
+                           band_strs=['B','V'],
                            Teff_round=3300, logg_round=5, vsini=.01, rp=1.1,
                            mp=1.6, K=2.8, R=1e5, aperture_m=3.6, QE=.1, Z=0,
-                           sigmaRV_activity=3.4):
+                           sigmaRV_activity=3.33):
     startheta = mags, float(Teff_round), float(logg_round), Z, vsini
     planettheta = rp, mp, K
     instrumenttheta = band_strs, R, aperture_m, QE

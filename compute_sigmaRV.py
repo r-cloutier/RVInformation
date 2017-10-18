@@ -158,7 +158,8 @@ def _convolve_band_spectrum(wl_microns, spectrum, band_str, R, pltt=False):
     # Convolve to instrument resolution
     FWHM_microns = wl_central_microns / float(R)
     sigma_microns = FWHM_microns / (2*np.sqrt(2*np.log(2)))
-    print '\nConvolving the stellar spectrum to the instrumental resolution...'
+    print '\nConvolving the %s stellar spectrum to the '%band_str + \
+        'instrumental resolution...'
     try:
         spectrum_conv = broadGaussFast(wl_band, spectrum_band, sigma_microns)
     except NameError: # no convolution is bad
@@ -331,7 +332,7 @@ def cgs2Nphot(wl_full_microns, spec_full_cgs, wl_band_microns, spec_band_cgs):
 def _rescale_sigmaRV(sigmaRV, mag, band_str, texp_min, aperture_m, QE, R):
     '''
     Rescale sigmaRV from SNR=100 per resolution element to whatever SNR is 
-    acheived in the input band over a given integration time.
+    achieved in the input band over a given integration time.
 
     Parameters
     ----------
@@ -358,6 +359,7 @@ def _rescale_sigmaRV(sigmaRV, mag, band_str, texp_min, aperture_m, QE, R):
 
     '''
     snr = _get_snr(mag, band_str, texp_min, aperture_m, QE, R)
+    print 'snr = ', snr
     return sigmaRV * np.sqrt(SNRreference / snr)
     
 
@@ -488,7 +490,6 @@ def exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
         particular reference band (either 'V' or 'J')
 
     '''
-    mags, band_strs = np.ascontiguousarray(mags), np.ascontiguousarray(band_strs)
     if 'V' in band_strs:
         reference_band = 'V'
     elif 'J' in band_strs:
@@ -556,8 +557,21 @@ def _remove_tellurics_from_W(wl_band, W, transmission_threshold=.02):
 
 def _compute_W(wl_band, spec_band):
     '''
-    Compute the weighting function F from the input spectrum using the Eqs. 
-    from Bouchy+2001.
+    Compute the weighting function W from the input spectrum using Eq. 8 from 
+    Bouchy+2001.
+
+    Parameters
+    ----------
+    `wl_band': numpy.array 
+        Spectral array of wavelengths in microns over the spectral band
+    `spec_band': numpy.array
+        Stellar spectrum array in Nphotons/s/cm^2/cm over the spectral band
+    
+    Returns
+    -------
+    `W': numpy.array
+        The weighting function as a function of wavelength in Nphotons/s/cm^2/cm
+
     '''
     # over-sample the spectrum
     wl2 = np.linspace(wl_band.min(), wl_band.max(), wl_band.size*10)
@@ -567,19 +581,49 @@ def _compute_W(wl_band, spec_band):
     # compute W
     dwl = np.diff(wl2)[0]
     W = wl2**2 * np.gradient(A, dwl)**2 / A
-    
-    # resample W
+
+    # resample W to the native resolution
     fint = interp1d(wl2, W)
     return fint(wl_band)
 
 
-def compute_sigmaRV(wl, spec, mag, band_str, texp_min=5, aperture_m=3.58,
-                    QE=.15, R=75e3):
-    W = _compute_W(wl, spec)
+def compute_sigmaRV(wl_band, spec_band, mag, band_str, texp, aperture_m, QE, R):
+    '''
+    Compute the photon-noise limit of the RV precision from the information 
+    content in the spectrum, over a particular band, and the characteristics 
+    of the observing setup.
+
+    Paremeters
+    ----------
+    `wl_band': numpy.array 
+        Spectral array of wavelengths in microns over the spectral band
+    `spec_band': numpy.array
+        Stellar spectrum array in Nphotons/s/cm^2/cm over the spectral band
+    `mag': scalar
+        The stellar magnitude in spectral band given in `band_str'
+    `band_str': str
+        The letter designating the spectral band under consideration. Must be 
+        in ['U','B','V','R','I','Z','Y','J','H','K']
+    `texp': scalar
+        The integration time in minutes
+    `aperture_m': float
+        The telescope's aperture diameter in meters
+    `QE': scalar
+        The quantum efficiency of the detector (0<QE<=1)
+    `R': scalar
+        The spectral resolution of the spectrograph (lambda / d_lambda)
+
+    Returns
+    -------
+    `sigmaRV_scaled': float
+        The RV precision scaled to the reference SNR of 100
+ 
+    '''
+    W = _compute_W(wl_band, spec_band)
     # remove tellurics
-    W_clean = _remove_tellurics_from_W(wl, W)
+    W_clean = _remove_tellurics_from_W(wl_band, W)
     g = np.arange(4, W_clean.size-4, dtype=int)
     sigmaRV = c / np.sqrt(np.sum(W_clean[g]))
-    sigmaRV_scaled = _rescale_sigmaRV(sigmaRV, mag, band_str, texp_min,
+    sigmaRV_scaled = _rescale_sigmaRV(sigmaRV, mag, band_str, texp,
                                       aperture_m, QE, R)
     return sigmaRV_scaled
