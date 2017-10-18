@@ -130,7 +130,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
 
 def _estimate_Nrv(startheta, planettheta, instrumenttheta,
                   sigmaRV_activity=0., sigmaRV_noisefloor=.5, texpmin=10,
-                  texpmax=60, SNRtarget=200):
+                  texpmax=60):
     '''
     Estimate the number of RVs required to measure the semiamplitude K at a 
     given signficance of a particular planet around a particular star.
@@ -165,11 +165,7 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
     `texpmax': scalar
         The maximum exposure time in minutes. Used to moderate the limit the 
         observational time that can be dedicated to a single star
-    `SNRtarget': scalar
-        The target signal-to-noise ratio per resolution element that needs to 
-        be achieved during the integration. This is applied to a reference band 
-        determined by the bands included in `band_strs' and is either 'V' or 'J'
-
+    
     Returns
     -------
     `Nrv': int
@@ -198,14 +194,13 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
     # compute texp in a reference band (either v or J)
     texp = exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE,
                                              R, texpmin=texpmin,
-                                             texpmax=texpmax,
-                                             SNRtarget=SNRtarget)
+                                             texpmax=texpmax)
 
     # compute sigmaRV in each band for a fixed texp
     sigmaRVs = np.zeros(len(mags))
     for i in range(sigmaRVs.size):
         wl, spec = get_reduced_spectrum(Teff_round, logg_round, Z, vsini,
-                                        band_strs[i], R)
+                                        band_strs[i], R, pltt=False)
         sigmaRVs[i] = compute_sigmaRV(wl, spec, mags[i], band_strs[i], texp,
                                       aperture_m, QE, R)
 
@@ -293,10 +288,6 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms):
         scaled to the known magnitudes from Sullivan
 
     '''
-    # Get the full spectrum
-    ##wl = get_wavelengthgrid()
-    ##_, spectrum = get_full_spectrum(Teff, logg, Z)
-
     # Use isochrone colours to compute mags in each band of interest
     # solar metallicity at a fixed age of 10^9 yrs
     Mu,Mb,Mv,Mr,Mi,Mj,Mh,Mk = _get_absolute_stellar_magnitudes(Ms)
@@ -313,24 +304,6 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms):
     else:
         raise ValueError('Do not have a reference magnitude ' + \
                          "in `band_strs'. Must include one of V, I, J or K.")
-        
-    # Integrate the spectrum over each band of interest to get flux
-    '''fluxes = np.zeros(len(band_strs))
-    for i in range(fluxes.size):
-
-        # Get total flux over the bandpass
-        wlmin, wlmax,_ = get_band_range(band_strs[i])
-        g = (wl >= wlmin) & (wl <= wlmax)
-        wl2, spectrum2 = wl[g], spectrum[g]
-        #spectrum2 = cgs2Nphot(wl, spectrum, wl2, spectrum[g])
-        fluxes[i] = np.sum(spectrum2)
-
-        # Get reference flux
-        if band_strs[i] == ref_band:
-            ref_flux = fluxes[i]
-
-    # Convert to magnitudes
-    mags = -2.5*np.log10(fluxes / ref_flux) + ref_mag'''
 
     mags = np.zeros(len(band_strs))
     for i in range(mags.size):

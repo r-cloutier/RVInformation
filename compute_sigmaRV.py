@@ -8,11 +8,11 @@ import pylab as plt
 import astropy.io.fits as fits
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.interpolate import interp1d, UnivariateSpline
-#from PyAstronomy.pyasl import broadGaussFast, rotBroad
+from PyAstronomy.pyasl import broadGaussFast, rotBroad
 
 
-global c, h, SNRreference, bands
-c, h, SNRreference = 299792458., 6.62607004e-34, 1e2
+global c, h, bands, SNRtarget
+c, h, SNRtarget = 299792458., 6.62607004e-34, 2e2
 bands = ['U','B','V','R','I','Z','Y','J','H','K']
 
 
@@ -51,11 +51,11 @@ def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
     wl = get_wavelengthgrid()
     _, spectrum = get_full_spectrum(float(Teff), float(logg), float(Z))
     wl_conv, spec_conv = _convolve_band_spectrum(wl, spectrum, band_str, R,
-                                                 pltt=False)
+                                                 pltt=pltt)
     #TEMP
     #spec_conv = _rotational_convolution(wl_conv, spec_conv, vsini, pltt=pltt)
     wl_resamp, spec_resamp = _resample_spectrum(wl_conv, spec_conv, R)
-    spec_scaled = cgs2Nphot(wl, spectrum, wl_resamp, spec_resamp)
+    spec_scaled = _cgs2Nphot(wl, spectrum, wl_resamp, spec_resamp)
     return wl_resamp, spec_scaled
 
 
@@ -288,7 +288,7 @@ def get_band_range(band_str):
     return wlmin, wlmax, wlcentral
     
 
-def cgs2Nphot(wl_full_microns, spec_full_cgs, wl_band_microns, spec_band_cgs):
+def _cgs2Nphot(wl_full_microns, spec_full_cgs, wl_band_microns, spec_band_cgs):
     '''
     Convert the input spectrum from cgs units (erg/s/cm^2/cm) to a the number 
     of photons with a fixed SNR at the center of the J band (1.25 microns).
@@ -323,7 +323,7 @@ def cgs2Nphot(wl_full_microns, spec_full_cgs, wl_band_microns, spec_band_cgs):
     centralJindex = np.where(abs(wl_full_microns-Jwl) == \
                              np.min(abs(wl_full_microns-Jwl)))[0][0]
     # SNR = sqrt(Nphot)
-    norm = SNRreference**2 / \
+    norm = SNRtarget**2 / \
            np.max(spec_full_Nphot[centralJindex-3:centralJindex+3])
     spec_Nphot_scaled = norm * spec_band_Nphot
     return spec_Nphot_scaled
@@ -359,8 +359,7 @@ def _rescale_sigmaRV(sigmaRV, mag, band_str, texp_min, aperture_m, QE, R):
 
     '''
     snr = _get_snr(mag, band_str, texp_min, aperture_m, QE, R)
-    print 'snr = ', snr
-    return sigmaRV * np.sqrt(SNRreference / snr)
+    return sigmaRV * np.sqrt(SNRtarget / snr)
     
 
 def _get_snr(mag, band_str, texp_min, aperture_m, QE, R):
@@ -451,10 +450,11 @@ def _get_snr(mag, band_str, texp_min, aperture_m, QE, R):
 
 
 def exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
-                                      texpmin=10, texpmax=60, SNRtarget=200):
+                                      texpmin=10, texpmax=60):
     '''
-    Compute the exposure time required to reach a target SNR per resolution element in 
-    a particular band. Either V for visible spectrographs or J for nIR spectrographs.
+    Compute the exposure time required to reach a target SNR per resolution 
+    element in a particular band. Either V for visible spectrographs or J for 
+    nIR spectrographs.
     
     Parameters
     ----------
@@ -478,16 +478,12 @@ def exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
     `texpmax': scalar
         The maximum exposure time in minutes. Used to moderate the limit the 
         observational time that can be dedicated to a single star
-    `SNRtarget': scalar
-        The target signal-to-noise ratio per resolution element that needs to 
-        be achieved during the integration. This is applied to a reference band 
-        determined by the bands included in `band_strs' and is either 'V' or 'J'
-
+    
     Returns
     -------
     `texp': float
-        The minimum exposure time in minutes required to achieve a desired SNR in a 
-        particular reference band (either 'V' or 'J')
+        The minimum exposure time in minutes required to achieve a desired SNR 
+        in a particular reference band (either 'V' or 'J')
 
     '''
     if 'V' in band_strs:
@@ -495,33 +491,40 @@ def exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
     elif 'J' in band_strs:
         reference_band = 'J'
     else:
-        raise ValueError("No reference band. Neither 'V' nor 'J' are included " + \
-                         'in band_strs.')
+        raise ValueError("No reference band. Neither 'V' nor 'J' are " + \
+                         'included in band_strs.')
     reference_mag = float(mags[band_strs == reference_band])
     
     texps = np.arange(texpmin, texpmax+.1, .1)  # minutes
     SNRs = np.zeros(texps.size)
     for i in range(texps.size):
-        SNRs[i] = _get_snr(reference_mag, reference_band, texps[i], aperture_m, QE, R)
+        SNRs[i] = _get_snr(reference_mag, reference_band, texps[i],
+                           aperture_m, QE, R)
 
-    g = abs(SNRs-SNRtarget) == abs(SNRs-SNRtarget).min()
-    return texps[g].min()
+    if SNRs.min() > SNRtarget:
+        return texpmin
+    elif SNRs.max() < SNRtarget:
+        return texpmax
+    else:
+        fint = interp1d(SNRs, texps)
+        return fint(SNRtarget)
 
 
 def _remove_tellurics_from_W(wl_band, W, transmission_threshold=.02):
     '''
-    Remove wavelengths that are sampled at wavelengths affected by tellurics at the 
-    level more than a specified threshold.
+    Remove wavelengths that are sampled at wavelengths affected by tellurics 
+    at the level more than a specified threshold.
 
     Parameters
     ----------
     `wl_band': array-like
         Spectral array of wavelengths in microns
     `W': array-like
-        Spectral weighting function from Eq. X in Bouchy et al 2001 in Nphot/s/cm^2/cm
+        Spectral weighting function from Eq. X in Bouchy et al 2001 in 
+        Nphot/s/cm^2/cm
     `transmission_threshold': scalar
-        Maximum fraction absorption from tellurics. Only keep where transmission is 
-        greater than 1-`transmission_threshold'
+        Maximum fraction absorption from tellurics. Only keep where 
+        transmission is greater than 1-transmission_threshold'
 
     Returns
     -------
@@ -535,14 +538,18 @@ def _remove_tellurics_from_W(wl_band, W, transmission_threshold=.02):
                                      skiprows=23).T
     wlTAPAS *= 1e-3
 
-    # remove rayleigh continuum via boxcar smoothing if passband is in that regime
+    # remove rayleigh continuum via boxcar smoothing if passband is in
+    # that regime
     if np.any(wl_band <=.8):
         boxsteps = np.arange(wlTAPAS.min(), wlTAPAS.max(), 1e-2)
         transTAPAS_continuum = np.zeros(boxsteps.size-1)
     	for i in range(boxsteps.size-1):
-	    transTAPAS_continuum[i] = np.max(transTAPAS[(wlTAPAS >= boxsteps[i]) \
-                                                        & (wlTAPAS <= boxsteps[i+1])])
-	fint = interp1d(boxsteps[1:]-np.diff(boxsteps)[0]*.5, transTAPAS_continuum, \
+	    transTAPAS_continuum[i] = np.max(transTAPAS[(wlTAPAS >= \
+                                                         boxsteps[i]) \
+                                                        & (wlTAPAS <= \
+                                                           boxsteps[i+1])])
+	fint = interp1d(boxsteps[1:]-np.diff(boxsteps)[0]*.5,
+                        transTAPAS_continuum,
                         bounds_error=False, fill_value=.878)
 	transTAPAS = transTAPAS - fint(wlTAPAS) + 1.
 
@@ -624,7 +631,6 @@ def compute_sigmaRV(wl_band, spec_band, mag, band_str, texp, aperture_m, QE, R):
     W_clean = _remove_tellurics_from_W(wl_band, W)
     g = np.arange(4, W_clean.size-4, dtype=int)
     sigmaRV = c / np.sqrt(np.sum(W_clean[g]))
-    sigmaRV_scaled = _rescale_sigmaRV(sigmaRV, mag, band_str, texp,
-                                      aperture_m, QE, R)
-    print sigmaRV, sigmaRV_scaled
-    return sigmaRV_scaled
+    #sigmaRV_scaled = _rescale_sigmaRV(sigmaRV, mag, band_str, texp,
+    #                                  aperture_m, QE, R)
+    return sigmaRV
