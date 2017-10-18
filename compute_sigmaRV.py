@@ -526,22 +526,22 @@ def exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
     `SNRtarget': scalar
         The target signal-to-noise ratio per resolution element that needs to 
         be achieved during the integration. This is applied to a reference band 
-        determined by the bands included in `band_strs' and is either 'v' or 'J'
+        determined by the bands included in `band_strs' and is either 'V' or 'J'
 
     Returns
     -------
     `texp': float
         The minimum exposure time in minutes required to achieve a desired SNR in a 
-        particular reference band (either 'v' or 'J')
+        particular reference band (either 'V' or 'J')
 
     '''
     band_strs = np.ascontiguousarray(band_strs)
-    if 'v' in band_strs:
-        reference_band = 'v'
+    if 'V' in band_strs:
+        reference_band = 'V'
     elif 'J' in band_strs:
         reference_band = 'J'
     else:
-        raise ValueError("No reference band. Neither 'v' nor 'J' are included " + \
+        raise ValueError("No reference band. Neither 'V' nor 'J' are included " + \
                          'in band_strs.')
     reference_mag = float(mags[band_strs == reference_band])
 

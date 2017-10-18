@@ -165,7 +165,7 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
     `SNRtarget': scalar
         The target signal-to-noise ratio per resolution element that needs to 
         be achieved during the integration. This is applied to a reference band 
-        determined by the bands included in `band_strs' and is either 'v' or 'J'
+        determined by the bands included in `band_strs' and is either 'V' or 'J'
 
     Returns
     -------
@@ -293,17 +293,17 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms):
     Mu,Mb,Mv,Mr,Mi,Mj,Mh,Mk = _get_absolute_stellar_magnitudes(Ms)
 
     Vmag, Imag, Jmag, Kmag = known_mags
-    if 'v' in band_strs:
-        ref_band, ref_mag, ref_absmag = 'v', Vmag, Mv
+    if 'V' in band_strs:
+        ref_band, ref_mag, ref_absmag = 'V', Vmag, Mv
     elif 'J' in band_strs:
         ref_band, ref_mag, ref_absmag = 'J', Jmag, Mj
-    elif 'i' in band_strs:
-        ref_band, ref_mag, ref_absmag = 'i', Imag, Mi
+    elif 'I' in band_strs:
+        ref_band, ref_mag, ref_absmag = 'I', Imag, Mi
     elif 'K' in band_strs:
         ref_band, ref_mag, ref_absmag = 'K', Kmag, Mk
     else:
         raise ValueError('Do not have a reference magnitude ' + \
-                         "in `band_strs'. Must include one of v, i, J or K.")
+                         "in `band_strs'. Must include one of V, I, J or K.")
         
     # Integrate the spectrum over each band of interest to get flux
     '''fluxes = np.zeros(len(band_strs))
