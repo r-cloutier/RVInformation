@@ -52,7 +52,8 @@ def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
     _, spectrum = get_full_spectrum(float(Teff), float(logg), float(Z))
     wl_conv, spec_conv = _convolve_band_spectrum(wl, spectrum, band_str, R,
                                                  pltt=pltt)
-    spec_conv = _rotational_convolution(wl_conv, spec_conv, vsini, pltt=pltt)
+    spec_conv = _rotational_convolution(wl_conv, spec_conv, vsini, band_str,
+					pltt=pltt)
     wl_resamp, spec_resamp = _resample_spectrum(wl_conv, spec_conv, R)
     spec_scaled = _cgs2Nphot(wl, spectrum, wl_resamp, spec_resamp)
     return wl_resamp, spec_scaled
@@ -173,7 +174,7 @@ def _convolve_band_spectrum(wl_microns, spectrum, band_str, R, pltt=False):
     return wl_band, spectrum_conv
 
 
-def _rotational_convolution(wl_band, spec_band, vsini, epsilon=0.6,
+def _rotational_convolution(wl_band, spec_band, vsini, band_str, epsilon=0.6,
                             pltt=False):
     '''
     Convolve the spectrum with rotational kernel based on the star's projected 
@@ -202,7 +203,8 @@ def _rotational_convolution(wl_band, spec_band, vsini, epsilon=0.6,
 
 
     '''
-    print '\nConvolving the stellar spectrum with a rotational profile...'
+    print '\nConvolving the %s stellar spectrum with a '%band_str + \
+	   'rotational profile...'
     try:
         spec_conv = rotBroad(wl_band, spec_band, epsilon, vsini)
     except NameError:   # no convolution is bad

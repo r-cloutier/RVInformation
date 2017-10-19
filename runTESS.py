@@ -16,7 +16,7 @@ G, rhoEarth, c, h = 6.67e-11, 5.51, 299792458., 6.62607004e-34
 
 def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
                       Z=0, sigmaRV_activity=0., sigmaRV_noisefloor=.5,
-                      protseed=None, verbose=True):
+                      protseed=None, testplanet_sigmaK=0, verbose=True):
     '''
     Estimate the number of RVs required to measure the mass of a transiting 
     TESS planet at a particular detection significance with a particular 
@@ -49,6 +49,11 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     `protseed': scalar
         Seed for the random number generator used to draw the stellar rotation 
         period which is not know a-priori for the TESS stars from Sullivan
+    `testplanet_sigmaK': scalar
+        If 0, assume we are calculating a TESS planet and use its mass to 
+        determine the required constraint on the K measurement uncertainty 
+        (sigmaK). Otherwise, set this value to the fractional K measurement 
+        uncertainty as is done for test cases (e.g. 0.33 for GJ1132)  
     `verbose': boolean
         If True, results for this star are printed to screen
 
@@ -113,9 +118,10 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     planettheta = rp, mp, K
     instrumenttheta = band_strs, R, aperture_m, QE
     Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff = \
-                    _estimate_Nrv(startheta, planettheta, instrumenttheta,
-                                  sigmaRV_activity=sigmaRV_activity,
-                                  sigmaRV_noisefloor=sigmaRV_noisefloor)
+                        estimate_Nrv(startheta, planettheta, instrumenttheta,
+                                     sigmaRV_activity=sigmaRV_activity,
+                                     sigmaRV_noisefloor=sigmaRV_noisefloor,
+                                     testplanet_sigmaK=testplanet_sigmaK)
 
     if verbose:
         print '\n%35s = %.3f m/s'%('Photon-noise limited RV uncertainty',
@@ -128,9 +134,9 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     return Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff
 
 
-def _estimate_Nrv(startheta, planettheta, instrumenttheta,
-                  sigmaRV_activity=0., sigmaRV_noisefloor=.5, texpmin=10,
-                  texpmax=60):
+def estimate_Nrv(startheta, planettheta, instrumenttheta,
+                 sigmaRV_activity=0., sigmaRV_noisefloor=.5, texpmin=10,
+                 texpmax=60, testplanet_sigmaK=0):
     '''
     Estimate the number of RVs required to measure the semiamplitude K at a 
     given signficance of a particular planet around a particular star.
@@ -165,6 +171,11 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
     `texpmax': scalar
         The maximum exposure time in minutes. Used to moderate the limit the 
         observational time that can be dedicated to a single star
+    `testplanet_sigmaK': scalar
+        If 0, assume we are calculating a TESS planet and use its mass to 
+        determine the required constraint on the K measurement uncertainty 
+        (sigmaK). Otherwise, set this value to the fractional K measurement 
+        uncertainty as is done for test cases (e.g. 0.33 for GJ1132)  
     
     Returns
     -------
@@ -191,7 +202,7 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
                       np.ascontiguousarray(band_strs)
     assert mags.size == band_strs.size
     
-    # compute texp in a reference band (either v or J)
+    # compute texp in a reference band (either V or J)
     texp = exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE,
                                              R, texpmin=texpmin,
                                              texpmax=texpmax)
@@ -211,8 +222,10 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
     sigmaRV_eff = np.sqrt(sigmaRV_phot**2 + sigmaRV_activity**2)
 
     # Compute Nrv to measure K at a given significance
-    ##sigmaK_target = get_sigmaK_target_v1(mp, rp)
-    sigmaK_target = get_sigmaK_target_v2(K)
+    if testplanet_sigmaK != 0:     # use for testing
+        sigmaK_target = get_sigmaK_target_v2(K, testplanet_sigmaK)
+    else:                          # use for TESS planets
+        sigmaK_target = get_sigmaK_target_v1(mp, rp)
     Nrv = int(np.round(2 * (sigmaRV_eff / sigmaK_target)**2))
 
     toverhead = 5.
@@ -428,30 +441,6 @@ def get_sigmaK_target_v1(rp, K, P, Ms, sigP=5e-5,
     return None
 
 
-def get_sigmaK_target_v2(K):
-    return .33 * K
-
-
-# GJ1132: mags=array([15.25, 13.52]), ['B','V']
-def TEST_estimate_Nrv_TESS(mags=[15.25, 13.52],
-                           band_strs=['B','V'],
-                           Teff_round=3300, logg_round=5, vsini=.01, rp=1.1,
-                           mp=1.6, K=2.8, R=1e5, aperture_m=3.6, QE=.1, Z=0,
-                           sigmaRV_activity=3.33):
-    startheta = mags, float(Teff_round), float(logg_round), Z, vsini
-    planettheta = rp, mp, K
-    instrumenttheta = band_strs, R, aperture_m, QE
-    Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff = \
-                        _estimate_Nrv(startheta, planettheta, instrumenttheta,
-                                      sigmaRV_activity=sigmaRV_activity)
-    print '\n%35s = %.3f m/s'%('Photon-noise limited RV uncertainty',
-                               sigmaRV_phot)
-    print '%35s = %.3f m/s'%('Effective RV uncertainty', sigmaRV_eff)
-    print '%35s = %i'%('Number of RVs', Nrv)
-    print '%35s = %.3f minutes'%('Exposure time', texp)
-    print '%35s = %.3f hours'%('Total observing time', tobserving)
-
-
-# GJ 1214:
-# mags=np.array([ 16.3387182 ,  13.31858571,  12.71599573,  11.5       ])
-# Teff_round, rp, mp, K = 3000, 2.7, 6.55, 12.2
+def get_sigmaK_target_v2(K, fracsigmaK):
+    print 'fracsigmaK = %.3f'%fracsigmaK
+    return fracsigmaK * K
