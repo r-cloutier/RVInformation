@@ -60,7 +60,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     `texp': float
         The exposure time in minutes for each radial velocity measurement
     `tobserving': float
-        The total observing time in minutes including a constant estimate of 
+        The total observing time in hours including a constant estimate of 
         overheads
     `sigmaRV_phot': float
         The photon-noise limit on the RV measurement precision in m/s
@@ -123,7 +123,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
         print '%35s = %.3f m/s'%('Effective RV uncertainty', sigmaRV_eff)
         print '%35s = %i'%('Number of RVs', Nrv)
         print '%35s = %.3f minutes'%('Exposure time', texp)
-        print '%35s = %.3f minutes'%('Total observing time', tobserving)
+        print '%35s = %.3f hours'%('Total observing time', tobserving)
     
     return Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff
 
@@ -174,7 +174,7 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
     `texp': float
         The exposure time in minutes for each radial velocity measurement
     `tobserving': float
-        The total observing time in minutes including a constant estimate of 
+        The total observing time in hours including a constant estimate of 
         overheads
     `sigmaRV_phot': float
         The photon-noise limit on the RV measurement precision in m/s
@@ -216,7 +216,7 @@ def _estimate_Nrv(startheta, planettheta, instrumenttheta,
     Nrv = int(np.round(2 * (sigmaRV_eff / sigmaK_target)**2))
 
     toverhead = 5.
-    tobserving = (texp+toverhead)*Nrv
+    tobserving = (texp+toverhead)*Nrv / 6e1
     
     return Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff
 
@@ -449,7 +449,7 @@ def TEST_estimate_Nrv_TESS(mags=[15.25, 13.52],
     print '%35s = %.3f m/s'%('Effective RV uncertainty', sigmaRV_eff)
     print '%35s = %i'%('Number of RVs', Nrv)
     print '%35s = %.3f minutes'%('Exposure time', texp)
-    print '%35s = %.3f minutes'%('Total observing time', tobserving)
+    print '%35s = %.3f hours'%('Total observing time', tobserving)
 
 
 # GJ 1214:

@@ -12,7 +12,7 @@ from PyAstronomy.pyasl import broadGaussFast, rotBroad
 
 
 global c, h, bands, SNRtarget
-c, h, SNRtarget = 299792458., 6.62607004e-34, 2e2
+c, h, SNRtarget = 299792458., 6.62607004e-34, 1e2
 bands = ['U','B','V','R','I','Z','Y','J','H','K']
 
 
@@ -52,8 +52,7 @@ def get_reduced_spectrum(Teff, logg, Z, vsini, band_str, R, pltt=False):
     _, spectrum = get_full_spectrum(float(Teff), float(logg), float(Z))
     wl_conv, spec_conv = _convolve_band_spectrum(wl, spectrum, band_str, R,
                                                  pltt=pltt)
-    #TEMP
-    #spec_conv = _rotational_convolution(wl_conv, spec_conv, vsini, pltt=pltt)
+    spec_conv = _rotational_convolution(wl_conv, spec_conv, vsini, pltt=pltt)
     wl_resamp, spec_resamp = _resample_spectrum(wl_conv, spec_conv, R)
     spec_scaled = _cgs2Nphot(wl, spectrum, wl_resamp, spec_resamp)
     return wl_resamp, spec_scaled
