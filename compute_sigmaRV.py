@@ -12,7 +12,7 @@ from PyAstronomy.pyasl import broadGaussFast, rotBroad
 
 
 global c, h, bands, SNRtarget
-c, h, SNRtarget = 299792458., 6.62607004e-34, 1e2
+c, h, SNRtarget = 299792458., 6.62607004e-34, 1e2 # TEMP
 bands = ['U','B','V','R','I','Z','Y','J','H','K']
 
 
@@ -522,8 +522,8 @@ def _remove_tellurics_from_W(wl_band, W, transmission_threshold=.02):
         Spectral weighting function from Eq. X in Bouchy et al 2001 in 
         Nphot/s/cm^2/cm
     `transmission_threshold': scalar
-        Maximum fraction absorption from tellurics. Only keep where 
-        transmission is greater than 1-transmission_threshold'
+        Maximum fractional absorption from tellurics. Only keep where 
+        transmission is greater than 1 - `transmission_threshold'
 
     Returns
     -------
