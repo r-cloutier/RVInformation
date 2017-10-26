@@ -6,7 +6,7 @@ import numpy as np
 from get_tess_data import get_TESS_data
 from compute_sigmaRV import *
 import pylab as plt
-import rvs
+import rvs, sys
 from uncertainties import unumpy as unp
 
 
@@ -16,7 +16,7 @@ G, rhoEarth, c, h = 6.67e-11, 5.51, 299792458., 6.62607004e-34
 
 def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
                       Z=0, sigmaRV_activity=0., sigmaRV_noisefloor=.5,
-                      protseed=None, testplanet_sigmaK=0, verbose=True):
+                      protseed=None, testplanet_sigmaKfrac=0, verbose=True):
     '''
     Estimate the number of RVs required to measure the mass of a transiting 
     TESS planet at a particular detection significance with a particular 
@@ -49,7 +49,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     `protseed': scalar
         Seed for the random number generator used to draw the stellar rotation 
         period which is not know a-priori for the TESS stars from Sullivan
-    `testplanet_sigmaK': scalar
+    `testplanet_sigmaKfrac': scalar
         If 0, assume we are calculating a TESS planet and use its mass to 
         determine the required constraint on the K measurement uncertainty 
         (sigmaK). Otherwise, set this value to the fractional K measurement 
@@ -79,6 +79,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     ra,dec,rp,P,S,K,Rs,Teff,Vmag,Imag,Jmag,Kmag,dist,_,_,snr,_ = get_TESS_data()
     nplanets, planetindex = ra.size, int(planetindex)
     assert 0 <= planetindex < nplanets
+    ra, dec = ra[planetindex], dec[planetindex]
     rp, P, S, K, Rs, Teff, Vmag, Imag, Jmag, Kmag, dist = rp[planetindex], \
                                                           P[planetindex], \
                                                           S[planetindex], \
@@ -114,14 +115,14 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     mags = _get_magnitudes(band_strs, known_mags, Teff_round, logg_round, Z, Ms)
     
     # Estimate Nrv for this TESS planet
-    startheta = mags, float(Teff_round), float(logg_round), Z, vsini
-    planettheta = rp, mp, K
+    startheta = mags, float(Teff_round), float(logg_round), Z, vsini, Ms
+    planettheta = rp, mp, K, P
     instrumenttheta = band_strs, R, aperture_m, QE
     Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff = \
                         estimate_Nrv(startheta, planettheta, instrumenttheta,
                                      sigmaRV_activity=sigmaRV_activity,
                                      sigmaRV_noisefloor=sigmaRV_noisefloor,
-                                     testplanet_sigmaK=testplanet_sigmaK)
+                                     testplanet_sigmaKfrac=testplanet_sigmaKfrac)
 
     if verbose:
         print '\n%35s = %.3f m/s'%('Photon-noise limited RV uncertainty',
@@ -130,13 +131,28 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
         print '%35s = %i'%('Number of RVs', Nrv)
         print '%35s = %.3f minutes'%('Exposure time', texp)
         print '%35s = %.3f hours'%('Total observing time', tobserving)
-    
+
+    # Save values
+    f = open('results/TESSplanet%.4d_%s.dat'%(planetindex, ''.join(band_strs)),
+             'w')
+    g = ''
+    for i in range(mags):
+        g += '# %s = %.3f\n'%(band_strs[i], mags[i])
+    g += '# ra (deg), dec (deg), P (days), rp (REarth), mp (MEarth), ' + \
+         'K (m/s), S (SEarth), Ms (MSun), Rs (RSun), Teff (K), dist (pc), ' + \
+         'Prot (days), vsini (km/s), Z ([Fe/H]), sigmaRV_act (m/s), ' + \
+         'R (l/dl), aperture (m), QE, sigmaRV_phot (m/s), ' + \
+         'sigmaRV_eff (m/s), texp (min), tobs_tot (hrs), Nrv\n'
+    g += '%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.2f\t%.2f\t%i\t%.3f\t%.3f\t%.3f\t%.1f\t%.3f\t%i\t%.2f\t%.2f\t%.3f\t%.3f\t%.3f\t%.3f\t%i'%(ra, dec, P, rp, mp, K, S, Ms, Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, R, aperture_m, QE, sigmaRV_phot, sigmaRV_eff, texp, tobserving, Nrv)
+    f.write(g)
+    f.close()
+        
     return Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff
 
 
 def estimate_Nrv(startheta, planettheta, instrumenttheta,
                  sigmaRV_activity=0., sigmaRV_noisefloor=.5, texpmin=10,
-                 texpmax=60, testplanet_sigmaK=0):
+                 texpmax=60, testplanet_sigmaKfrac=0):
     '''
     Estimate the number of RVs required to measure the semiamplitude K at a 
     given signficance of a particular planet around a particular star.
@@ -171,7 +187,7 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
     `texpmax': scalar
         The maximum exposure time in minutes. Used to moderate the limit the 
         observational time that can be dedicated to a single star
-    `testplanet_sigmaK': scalar
+    `testplanet_sigmaKfrac': scalar
         If 0, assume we are calculating a TESS planet and use its mass to 
         determine the required constraint on the K measurement uncertainty 
         (sigmaK). Otherwise, set this value to the fractional K measurement 
@@ -195,8 +211,8 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
         activity in m/s
 
     '''
-    mags, Teff_round, logg_round, Z, vsini = startheta
-    rp, mp, K = planettheta
+    mags, Teff_round, logg_round, Z, vsini, Ms = startheta
+    rp, mp, K, P = planettheta
     band_strs, R, aperture_m, QE = instrumenttheta
     mags, band_strs = np.ascontiguousarray(mags), \
                       np.ascontiguousarray(band_strs)
@@ -215,17 +231,19 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
         sigmaRVs[i] = compute_sigmaRV(wl, spec, mags[i], band_strs[i], texp,
                                       aperture_m, QE, R)
 
-    # Compute the effective sigmaRV
+    # Compute sigmaRV over all bands
     sigmaRV_phot = 1. / np.sqrt(np.sum(1./sigmaRVs**2))
     sigmaRV_phot = sigmaRV_phot if sigmaRV_phot > sigmaRV_noisefloor \
                    else float(sigmaRV_noisefloor)
+
+    # compute effective sigmaRV
     sigmaRV_eff = np.sqrt(sigmaRV_phot**2 + sigmaRV_activity**2)
 
     # Compute Nrv to measure K at a given significance
-    if testplanet_sigmaK != 0:     # use for testing
-        sigmaK_target = get_sigmaK_target_v2(K, testplanet_sigmaK)
+    if testplanet_sigmaKfrac != 0:     # use for testing
+        sigmaK_target = get_sigmaK_target_v2(K, testplanet_sigmaKfrac)
     else:                          # use for TESS planets
-        sigmaK_target = get_sigmaK_target_v1(mp, rp)
+        sigmaK_target = get_sigmaK_target_v1(rp, K, P, Ms)
     Nrv = int(np.round(2 * (sigmaRV_eff / sigmaK_target)**2))
 
     toverhead = 5.
@@ -424,8 +442,10 @@ def get_stellar_mass(P, mp, K):
 
 def get_sigmaK_target_v1(rp, K, P, Ms, sigP=5e-5,
                          fracsigrp=1e-1, fracsigMs=1e-1, fracsigrho_target=.2):
-    '''Compute the K detection significance that must be achieved in order to 
-    measure a planet's density at a specific precision.'''
+    '''
+    Compute the K detection significance required to measure a planet's density 
+    at a specific fractional precision.
+    '''
     urp, uP, uMs = unp.uarray(rp, rp*fracsigrp), unp.uarray(P, sigP), \
                    unp.uarray(Ms, Ms*fracsigMs)
 
@@ -442,5 +462,4 @@ def get_sigmaK_target_v1(rp, K, P, Ms, sigP=5e-5,
 
 
 def get_sigmaK_target_v2(K, fracsigmaK):
-    print 'fracsigmaK = %.3f'%fracsigmaK
     return fracsigmaK * K

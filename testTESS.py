@@ -63,7 +63,7 @@ def Test_Planet_FAST(sigmaRV_eff, sigmaK_target):
     required to measure K with a particular uncertainty given and effective 
     RV measurement uncertainty.  
     '''
-    return int(np.round(2 * (sigmaRV_eff / sigmaK_target)**2))
+    return int(np.round(2 * (float(sigmaRV_eff) / sigmaK_target)**2))
 
 
                      
