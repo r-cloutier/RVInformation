@@ -311,39 +311,43 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms):
     '''
     # Use isochrone colours to compute mags in each band of interest
     # solar metallicity at a fixed age of 10^9 yrs
-    Mu,Mb,Mv,Mr,Mi,Mj,Mh,Mk = _get_absolute_stellar_magnitudes(Ms)
+    Mu, Mb, Mv, Mr, Mi, MZ, MY, MJ, MH, MK = _get_absolute_stellar_magnitudes(Ms)
 
     Vmag, Imag, Jmag, Kmag = known_mags
     if 'V' in band_strs:
         ref_band, ref_mag, ref_absmag = 'V', Vmag, Mv
     elif 'J' in band_strs:
-        ref_band, ref_mag, ref_absmag = 'J', Jmag, Mj
+        ref_band, ref_mag, ref_absmag = 'J', Jmag, MJ
     elif 'I' in band_strs:
         ref_band, ref_mag, ref_absmag = 'I', Imag, Mi
     elif 'K' in band_strs:
-        ref_band, ref_mag, ref_absmag = 'K', Kmag, Mk
+        ref_band, ref_mag, ref_absmag = 'K', Kmag, MK
     else:
         raise ValueError('Do not have a reference magnitude ' + \
                          "in `band_strs'. Must include one of V, I, J or K.")
 
     mags = np.zeros(len(band_strs))
     for i in range(mags.size):
-        if band_strs[i] == 'U':
+        if band_strs[i] == 'u':
             absmag = Mu
-        elif band_strs[i] == 'B':
+        elif band_strs[i] == 'b':
             absmag = Mb
-        elif band_strs[i] == 'V':
+        elif band_strs[i] == 'v':
             absmag = Mv
-        elif band_strs[i] == 'R':
+        elif band_strs[i] == 'r':
             absmag = Mr
-        elif band_strs[i] == 'I':
+        elif band_strs[i] == 'i':
             absmag = Mi
+        elif band_strs[i] == 'Z':
+            absmag = MZ
+        elif band_strs[i] == 'Y':
+            absmag = MY
         elif band_strs[i] == 'J':
-            absmag = Mj
+            absmag = MJ
         elif band_strs[i] == 'H':
-            absmag = Mh
+            absmag = MH
         elif band_strs[i] == 'K':
-            absmag = Mk
+            absmag = MK
         else:
             raise ValueError('Unknown passband: %s'%band_strs[i])
         mags[i] = ref_mag - ref_absmag + absmag
@@ -369,16 +373,26 @@ def _get_absolute_stellar_magnitudes(Ms, logage=9):
         The absolute magnitudes of the star 
 
     '''
+    # First set of isochrones (ubvri)
     logages,Mss,Mus,Mbs,Mvs,Mrs,Mis,Mjs,Mhs,Mks = \
-                                np.loadtxt('input_data/isoc_z019.dat',
+                                np.loadtxt('input_data/isoc_z019_ubvrijhk.dat',
                                 usecols=(0,1,7,8,9,10,11,12,13,14)).T
-    g = logages == 9
+    g = logages == logage
     Mss,Mus,Mbs,Mvs,Mrs,Mis,Mjs,Mhs,Mks = Mss[g],Mus[g],Mbs[g],Mvs[g],Mrs[g], \
                                           Mis[g],Mjs[g],Mhs[g],Mks[g]
     g = abs(Mss-Ms) == np.min(abs(Mss-Ms))
     Mu,Mb,Mv,Mr,Mi,Mj,Mh,Mk = Mus[g],Mbs[g],Mvs[g],Mrs[g],Mis[g],Mjs[g], \
                               Mhs[g],Mks[g]
-    return Mu, Mb, Mv, Mr, Mi, Mj, Mh, Mk 
+    # Second set of isochrones (ZYJHK)
+    logages2,Mss2,MZs,MYs,MJs,MHs,MKs = \
+                                np.loadtxt('input_data/isoc_z019_ZYJHK.dat',
+                                usecols=(0,1,7,8,9,10,11)).T
+    g = logages2 == logage
+    Mss2,MZs,MYs,MJs,MHs,MKs = Mss2[g],MZs[g],MYs[g],MJs[g],MHs[g],MKs[g]
+    g = abs(Mss2-Ms) == np.min(abs(Mss2-Ms))
+    MZ,MY,MJ,MH,MK = MZs[g],MYs[g],MJs[g],MHs[g],MKs[g]    
+
+    return Mu, Mb, Mv, Mr, Mi, MZ, MY, MJ, MH, MK 
         
 
 def get_planet_mass(rp):
