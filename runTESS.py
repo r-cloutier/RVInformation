@@ -31,7 +31,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
         A list of the spectral bands that span the wavelength coverage of the 
         spectrograph used to measure the radial velocities of the TESS star. 
         All band_strs entries must be in 
-        ['U','B','V','R','I','Z','Y','J','H','K']
+        ['U','B','V','R','I','Y','J','H','K']
         and at least one of ['V','I','J','K'] must be included for scaling of 
         the TESS stars from Sullivan
     `R': scalar
@@ -290,11 +290,11 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms):
         A list of the spectral bands that span the wavelength coverage of the 
         spectrograph used to measure the radial velocities of the TESS star. 
         All band_strs entries must be in 
-        ['U','B','V','R','I','Z','Y','J','H','K']
+        ['U','B','V','R','I','Y','J','H','K']
         and at least one of ['V','I','J','K'] must be included for scaling of 
         the TESS stars from Sullivan
     `known_mags': list of scalars
-        A list of the V, I, J, and K stellar apparent magnitudes from Sullivan
+        A list of the v, i, J, and K stellar apparent magnitudes from Sullivan
     `Teff': scalar
         The stellar effective temperature in Kelvin
     `logg': scalar
@@ -311,7 +311,7 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms):
     '''
     # Use isochrone colours to compute mags in each band of interest
     # solar metallicity at a fixed age of 10^9 yrs
-    Mu, Mb, Mv, Mr, Mi, MZ, MY, MJ, MH, MK = _get_absolute_stellar_magnitudes(Ms)
+    Mu, Mb, Mv, Mr, Mi, MY, MJ, MH, MK = _get_absolute_stellar_magnitudes(Ms)
 
     Vmag, Imag, Jmag, Kmag = known_mags
     if 'V' in band_strs:
@@ -328,18 +328,16 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms):
 
     mags = np.zeros(len(band_strs))
     for i in range(mags.size):
-        if band_strs[i] == 'u':
+        if band_strs[i] == 'U':
             absmag = Mu
-        elif band_strs[i] == 'b':
+        elif band_strs[i] == 'B':
             absmag = Mb
-        elif band_strs[i] == 'v':
+        elif band_strs[i] == 'V':
             absmag = Mv
-        elif band_strs[i] == 'r':
+        elif band_strs[i] == 'R':
             absmag = Mr
-        elif band_strs[i] == 'i':
+        elif band_strs[i] == 'I':
             absmag = Mi
-        elif band_strs[i] == 'Z':
-            absmag = MZ
         elif band_strs[i] == 'Y':
             absmag = MY
         elif band_strs[i] == 'J':
@@ -392,7 +390,7 @@ def _get_absolute_stellar_magnitudes(Ms, logage=9):
     g = abs(Mss2-Ms) == np.min(abs(Mss2-Ms))
     MZ,MY,MJ,MH,MK = MZs[g],MYs[g],MJs[g],MHs[g],MKs[g]    
 
-    return Mu, Mb, Mv, Mr, Mi, MZ, MY, MJ, MH, MK 
+    return Mu, Mb, Mv, Mr, Mi, MY, MJ, MH, MK 
         
 
 def get_planet_mass(rp):

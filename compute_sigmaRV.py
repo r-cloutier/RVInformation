@@ -254,7 +254,7 @@ def get_band_range(band_str):
     `band_str': str
         The letter designating the spectral band under consideration. Must be 
         in ['U','B','V','R','I','Y','J','H','K']
-
+        
     Returns
     -------
     `wlmin': float
@@ -267,27 +267,27 @@ def get_band_range(band_str):
     '''
     # bin widths are chosen to have the same number of wavelength elements
     # per band for flux normalization purposes
+    # http://svo2.cab.inta-csic.es/theory/fps3/index.php?mode=browse&gname=Generic&gname2=Johnson
+    # http://svo2.cab.inta-csic.es/theory/fps3/index.php?mode=browse&gname=CFHT&gname2=Wircam
+    # http://svo2.cab.inta-csic.es/theory/fps3/index.php?mode=browse&gname=UKIRT
     if band_str == 'U':
-        wlmin, wlmax, wlcentral = 0.31, 0.42, .3656
+        wlwidth, wlcentral = .06570, .35311
     elif band_str == 'B':
-        wlmin, wlmax, wlcentral = 0.37, 0.59, .4353    
+        wlwidth, wlcentral = .09727, .44304
     elif band_str == 'V':
-        wlmin, wlmax, wlcentral = 0.47, 0.70, .5477
+        wlwidth, wlcentral = .08897, .55372
     elif band_str == 'R':
-        wlmin, wlmax, wlcentral = 0.54, 0.87, .6349
+        wlwidth, wlcentral = .20700, .69396
     elif band_str == 'I':
-        wlmin, wlmax, wlcentral = 0.70, 1.13, .8797
+        wlwidth, wlcentral = .23160, .87807
     elif band_str == 'Y':
-        wlmin, wlmax, wlcentral = 1.0, 1.1, 1.02
+        wlwidth, wlcentral = .10842, 1.02588
     elif band_str == 'J':
-        #wlmin, wlmax, wlcentral = 1.17, 1.33, 1.22
-        wlwidth, wlcentral = 0.15479, 1.25446
+        wlwidth, wlcentral = .15479, 1.25446
     elif band_str == 'H':
-        #wlmin, wlmax, wlcentral = 1.5, 1.75, 1.63
-        wlwidth, wlcentral = 0.28857, 1.63099
+        wlwidth, wlcentral = .28857, 1.63099
     elif band_str == 'K':
-        #wlmin, wlmax, wlcentral = 2.07, 2.35, 2.19
-        wlwidth, wlcentral = 0.32086, 2.14975
+        wlwidth, wlcentral = .32086, 2.14975
     else:
         raise ValueError('Unknown bandpass: %s'%band_str)
 
