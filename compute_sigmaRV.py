@@ -507,6 +507,7 @@ def exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
         SNRs[i] = _get_snr(reference_mag, reference_band, texps[i],
                            aperture_m, QE, R)
 
+        
     if SNRs.min() > SNRtarget:
         return texpmin
     elif SNRs.max() < SNRtarget:
