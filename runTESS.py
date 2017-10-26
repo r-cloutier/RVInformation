@@ -133,20 +133,10 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
         print '%35s = %.3f hours'%('Total observing time', tobserving)
 
     # Save values
-    f = open('results/TESSplanet%.4d_%s.dat'%(planetindex, ''.join(band_strs)),
-             'w')
-    g = ''
-    for i in range(mags):
-        g += '# %s = %.3f\n'%(band_strs[i], mags[i])
-    g += '# ra (deg), dec (deg), P (days), rp (REarth), mp (MEarth), ' + \
-         'K (m/s), S (SEarth), Ms (MSun), Rs (RSun), Teff (K), dist (pc), ' + \
-         'Prot (days), vsini (km/s), Z ([Fe/H]), sigmaRV_act (m/s), ' + \
-         'R (l/dl), aperture (m), QE, sigmaRV_phot (m/s), ' + \
-         'sigmaRV_eff (m/s), texp (min), tobs_tot (hrs), Nrv\n'
-    g += '%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.2f\t%.2f\t%i\t%.3f\t%.3f\t%.3f\t%.1f\t%.3f\t%i\t%.2f\t%.2f\t%.3f\t%.3f\t%.3f\t%.3f\t%i'%(ra, dec, P, rp, mp, K, S, Ms, Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, R, aperture_m, QE, sigmaRV_phot, sigmaRV_eff, texp, tobserving, Nrv)
-    f.write(g)
-    f.close()
-        
+    save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
+                 Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, R,
+                 aperture_m, QE, sigmaRV_phot, sigmaRV_eff, texp, tobserving,
+                 Nrv)
     return Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff
 
 
@@ -463,3 +453,26 @@ def get_sigmaK_target_v1(rp, K, P, Ms, sigP=5e-5,
 
 def get_sigmaK_target_v2(K, fracsigmaK):
     return fracsigmaK * K
+
+
+def save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
+                 Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, R,
+                 aperture_m, QE, sigmaRV_phot, sigmaRV_eff, texp, tobserving,
+                 Nrv):
+    '''
+    Write the stellar, planet, observatory parameters, and results to a text 
+    file.
+    '''
+    f = open('results/TESSplanet%.4d_%s.dat'%(planetindex, ''.join(band_strs)),
+             'w')
+    g = ''
+    for i in range(mags):
+        g += '# %s = %.3f\n'%(band_strs[i], mags[i])
+    g += '# ra (deg), dec (deg), P (days), rp (REarth), mp (MEarth), ' + \
+         'K (m/s), S (SEarth), Ms (MSun), Rs (RSun), Teff (K), dist (pc), ' + \
+         'Prot (days), vsini (km/s), Z ([Fe/H]), sigmaRV_act (m/s), ' + \
+         'R (l/dl), aperture (m), QE, sigmaRV_phot (m/s), ' + \
+         'sigmaRV_eff (m/s), texp (min), tobs_tot (hrs), Nrv\n'
+    g += '%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.2f\t%.2f\t%i\t%.3f\t%.3f\t%.3f\t%.1f\t%.3f\t%i\t%.2f\t%.2f\t%.3f\t%.3f\t%.3f\t%.3f\t%i'%(ra, dec, P, rp, mp, K, S, Ms, Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, R, aperture_m, QE, sigmaRV_phot, sigmaRV_eff, texp, tobserving, Nrv)
+    f.write(g)
+    f.close()

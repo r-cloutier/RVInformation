@@ -64,6 +64,3 @@ def Test_Planet_FAST(sigmaRV_eff, sigmaK_target):
     RV measurement uncertainty.  
     '''
     return int(np.round(2 * (float(sigmaRV_eff) / sigmaK_target)**2))
-
-
-                     
