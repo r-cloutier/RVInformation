@@ -422,9 +422,6 @@ def _get_snr(mag, band_str, texp_min, aperture_m, QE, R):
     elif band_str == 'I':
         Fl = 9.329e-10
         l  = 8780.7
-    elif band_str == 'Z':
-        Fl = np.nan
-        l  = 8897.06
     elif band_str == 'Y':
         Fl = 5.949e-10
         l  = 10258.8
