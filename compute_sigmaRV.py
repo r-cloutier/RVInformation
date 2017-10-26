@@ -448,8 +448,9 @@ def _get_snr(mag, band_str, texp_min, aperture_m, QE, R):
     Nphot_res = Nphot_A * (l / R)
 
     # Add photon noise and dark current to noise budget
-    darkcurrent, footprint = 1e-2, 12     # electrons/s, pixels
-    SNR = Nphot_res / np.sqrt(Nphot_res + darkcurrent*footprint*texp_s)
+    ##darkcurrent, footprint = 1e-2, 12     # electrons/s, pixels
+    ##SNR = Nphot_res / np.sqrt(Nphot_res + darkcurrent*footprint*texp_s)
+    SNR = np.sqrt(Nphot_res)
 
     return SNR
 

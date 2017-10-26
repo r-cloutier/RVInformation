@@ -466,7 +466,7 @@ def save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
     f = open('results/TESSplanet%.4d_%s.dat'%(planetindex, ''.join(band_strs)),
              'w')
     g = ''
-    for i in range(mags):
+    for i in range(len(mags)):
         g += '# %s = %.3f\n'%(band_strs[i], mags[i])
     g += '# ra (deg), dec (deg), P (days), rp (REarth), mp (MEarth), ' + \
          'K (m/s), S (SEarth), Ms (MSun), Rs (RSun), Teff (K), dist (pc), ' + \
