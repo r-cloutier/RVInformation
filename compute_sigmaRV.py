@@ -269,7 +269,6 @@ def get_band_range(band_str):
     # per band for flux normalization purposes
     # http://svo2.cab.inta-csic.es/theory/fps3/index.php?mode=browse&gname=Generic&gname2=Johnson
     # http://svo2.cab.inta-csic.es/theory/fps3/index.php?mode=browse&gname=CFHT&gname2=Wircam
-    # http://svo2.cab.inta-csic.es/theory/fps3/index.php?mode=browse&gname=UKIRT
     if band_str == 'U':
         wlwidth, wlcentral = .06570, .35311
     elif band_str == 'B':
