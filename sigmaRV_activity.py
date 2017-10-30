@@ -118,7 +118,60 @@ def Prot2logRhk(Prot, Ms, mean_only=False):
 
     return logRhks
 
-
-
 # logRhk for low-mass stars: http://adsabs.harvard.edu/abs/2017A%26A...600A..13A
 # lgoRhk for FGK stars: http://adsabs.harvard.edu/abs/2011arXiv1107.5325L 
+
+def get_prot_kepler(Teff, seed=None):
+    '''
+    Draw a stellar rotation period based on the measured distribution from
+    McQuillan+2014 (2014ApJS..211...24M).
+
+    Parameters
+    ----------
+    `Teff': scalar
+        The effective temperature of the star whose rotation period is being
+        sampling
+    `protseed': scalar
+        Seed for the random number generator used to draw the stellar rotation
+        period which is not know a-priori for the TESS stars from Sullivan
+
+    Returns
+    -------
+    `Prot': float
+        The star's sampled rotation period in days
+
+    '''
+    Teffs, Prots = np.loadtxt('input_data/asu.tsv', skiprows=37).T
+    # Isolate range of effective temperatures
+    dT = 1e2
+    if Teff > Teffs.max():
+        g = Teffs >= Teffs.max()-dT
+    elif Teff < Teffs.min():
+        g = Teffs <= Teffs.min()+dT
+    else:
+        g = (Teffs >= Teff-dT) & (Teffs <= Teff+dT)
+    # Set seed
+    if seed != None:
+        np.random.seed(int(seed))
+    return np.random.choice(Prots[g]) + np.random.randn() * .1
+
+
+def get_prot_gyrochronology(B_V):
+    '''
+    Draw the stellar rotation period using gyrochronology based on the star's 
+    B-V colour and its drawn age for a field star.
+
+    Parameters
+    ----------
+    `B_V': scalar
+        The B-V colour of the star
+
+    Returns
+    -------
+    `Prot': float
+        The star's sampled rotation period in days
+
+    '''
+    f = .77*(B_V-.47)**(.55) if B_V >= .47 else 0.
+    t_Myr = draw_age()
+    return np.sqrt(t) * f

@@ -5,6 +5,7 @@ https://github.com/r-cloutier/Transiting_RVcalculator.git
 import numpy as np
 from get_tess_data import get_TESS_data
 from compute_sigmaRV import *
+from sigmaRV_activity import *
 import pylab as plt
 import rvs, sys
 from uncertainties import unumpy as unp
@@ -103,17 +104,18 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     loggs = np.arange(0,6.1,.5)
     logg_round = loggs[abs(loggs-logg) == np.min(abs(loggs-logg))]
 
-    # Compute vsini
-    ## TEMP
-    Prot = _get_prot(Teff, seed=protseed)
-    I = abs(np.arccos(np.random.uniform(-1,1)))
-    vsini = 2*np.pi * rvs.Rsun2m(Rs)*1e-3 * np.sin(I) / rvs.days2sec(Prot)
-
     # Get the stellar magnitudes in the desired bands scaled to the results
     # from Sullivan
     known_mags = [Vmag, Imag, Jmag, Kmag]
-    mags = _get_magnitudes(band_strs, known_mags, Teff_round, logg_round, Z, Ms)
-    
+    band_strs_tmp = list(np.append(band_strs, 'B'))
+    mags = _get_magnitudes(band_strs_tmp, known_mags, Teff_round, logg_round, Z, Ms)
+    mags, Bmag = mags[:-1], float(mags[-1])
+
+    # compute vsini
+    Prot = get_prot_gyrochronology(Bmag-Vmag)
+    I = abs(np.arccos(np.random.uniform(-1,1)))
+    vsini = 2*np.pi * rvs.Rsun2m(Rs)*1e-3 * np.sin(I) / rvs.days2sec(Prot) 
+
     # Estimate Nrv for this TESS planet
     startheta = mags, float(Teff_round), float(logg_round), Z, vsini, Ms
     planettheta = rp, mp, K, P
@@ -240,43 +242,6 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
     tobserving = (texp+toverhead)*Nrv / 6e1
     
     return Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff
-
-
-
-def _get_prot(Teff, seed=None):
-    '''
-    Draw a stellar rotation period based on the measured distribution from
-    McQuillan+2014 (2014ApJS..211...24M).
-
-    Parameters
-    ----------
-    `Teff': scalar
-        The effective temperature of the star whose rotation period is being 
-        sampling
-    `protseed': scalar
-        Seed for the random number generator used to draw the stellar rotation 
-        period which is not know a-priori for the TESS stars from Sullivan
-    
-    Returns
-    -------
-    `protseed': float
-        The star's sampled rotation period in days
-
-    '''
-    Teffs, Prots = np.loadtxt('input_data/asu.tsv', skiprows=37).T
-    # Isolate range of effective temperatures
-    dT = 1e2
-    if Teff > Teffs.max():
-        g = Teffs >= Teffs.max()-dT
-    elif Teff < Teffs.min():
-        g = Teffs <= Teffs.min()+dT
-    else:
-        g = (Teffs >= Teff-dT) & (Teffs <= Teff+dT)
-    # Set seed
-    if seed != None:
-        np.random.seed(int(seed))
-    return np.random.choice(Prots[g]) + np.random.randn() * .1
-
 
  
 def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms):
