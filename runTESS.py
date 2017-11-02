@@ -77,21 +77,22 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
 
     '''
     # Read-in TESS data for this planetary system
-    ra,dec,rp,P,S,K,Rs,Teff,Vmag,Imag,Jmag,Kmag,dist,_,_,snr,_ = get_TESS_data()
+    ra,dec,rp,P,S,K,Rs,Teff,Vmag,Imag,Jmag,Kmag,dist,_,_,_,mult = get_TESS_data()
     nplanets, planetindex = ra.size, int(planetindex)
     assert 0 <= planetindex < nplanets
     ra, dec = ra[planetindex], dec[planetindex]
-    rp, P, S, K, Rs, Teff, Vmag, Imag, Jmag, Kmag, dist = rp[planetindex], \
-                                                          P[planetindex], \
-                                                          S[planetindex], \
-                                                          K[planetindex], \
-                                                          Rs[planetindex], \
-                                                          Teff[planetindex], \
-                                                          Vmag[planetindex], \
-                                                          Imag[planetindex], \
-                                                          Jmag[planetindex], \
-                                                          Kmag[planetindex], \
-                                                          dist[planetindex]
+    rp, P, S, K, Rs, Teff, Vmag, Imag, Jmag, Kmag, dist, mult = rp[planetindex], \
+                                                                P[planetindex], \
+                                                                S[planetindex], \
+                                                                K[planetindex], \
+                                                                Rs[planetindex], \
+                                                                Teff[planetindex], \
+                                                                Vmag[planetindex], \
+                                                                Imag[planetindex], \
+                                                                Jmag[planetindex], \
+                                                                Kmag[planetindex], \
+                                                                dist[planetindex], \
+                                                                mult[planetindex]
 
     # Compute parameters of interest
     mp = get_planet_mass(rp)
@@ -110,15 +111,16 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     band_strs_tmp = list(np.append(band_strs, 'B'))
     mags = _get_magnitudes(band_strs_tmp, known_mags, Teff_round, logg_round, Z, Ms)
     mags, Bmag = mags[:-1], float(mags[-1])
-
+    B_V = Bmag - Vmag
+    
     # compute vsini
-    Prot = get_prot_gyrochronology(Bmag-Vmag)
+    Prot = get_prot_gyrochronology(B_V)
     I = abs(np.arccos(np.random.uniform(-1,1)))
     vsini = 2*np.pi * rvs.Rsun2m(Rs)*1e-3 * np.sin(I) / rvs.days2sec(Prot) 
 
     # Estimate Nrv for this TESS planet
-    startheta = mags, float(Teff_round), float(logg_round), Z, vsini, Ms
-    planettheta = rp, mp, K, P
+    startheta = mags, float(Teff_round), float(logg_round), Z, vsini, Ms, Prot, B_V
+    planettheta = rp, mp, K, P, mult
     instrumenttheta = band_strs, R, aperture_m, QE
     Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff = \
                         estimate_Nrv(startheta, planettheta, instrumenttheta,
@@ -143,7 +145,8 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
 
 
 def estimate_Nrv(startheta, planettheta, instrumenttheta,
-                 sigmaRV_activity=0., sigmaRV_noisefloor=.5, texpmin=10,
+                 sigmaRV_activity=0., sigmaRV_planets=0.,
+                 sigmaRV_noisefloor=.5, texpmin=10,
                  texpmax=60, testplanet_sigmaKfrac=0):
     '''
     Estimate the number of RVs required to measure the semiamplitude K at a 
@@ -158,6 +161,9 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
             - logg (in cgs units) included in the PHOENIX models
             - metallicity ([Fe/H] in solar units) included in the PHOENIX models
             - projected rotation velocity (in km/s)
+            - stellar mass (in solar masses)
+            - stellar rotation period (in days) 
+            - B-V colour 
     `planettheta': tuple (3 entries)
         Containing the
             - planet radius (in Earth radii)
@@ -203,8 +209,8 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
         activity in m/s
 
     '''
-    mags, Teff_round, logg_round, Z, vsini, Ms = startheta
-    rp, mp, K, P = planettheta
+    mags, Teff_round, logg_round, Z, vsini, Ms, Prot, B_V = startheta
+    rp, mp, K, P, mult = planettheta
     band_strs, R, aperture_m, QE = instrumenttheta
     mags, band_strs = np.ascontiguousarray(mags), \
                       np.ascontiguousarray(band_strs)
@@ -228,8 +234,16 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
     sigmaRV_phot = sigmaRV_phot if sigmaRV_phot > sigmaRV_noisefloor \
                    else float(sigmaRV_noisefloor)
 
+    # estimate sigmaRV due to stellar activity
+    if sigma_activity != 0:
+        sigma_activity = get_sigmaRV_activity(Teff_round, Prot, B_V)
+        
+    # estimate sigmaRV due to unseen planets
+    if sigmaRV_planets != 0:
+        sigmaRV_planets = get_sigmaRV_planets(P, mult)
+    
     # compute effective sigmaRV
-    sigmaRV_eff = np.sqrt(sigmaRV_phot**2 + sigmaRV_activity**2)
+    sigmaRV_eff = np.sqrt(sigmaRV_phot**2 + sigmaRV_activity**2 + sigmaRV_planets**2)
 
     # Compute Nrv to measure K at a given significance
     if testplanet_sigmaKfrac != 0:     # use for testing
