@@ -6,8 +6,9 @@ import numpy as np
 from get_tess_data import get_TESS_data
 from compute_sigmaRV import *
 from sigmaRV_activity import *
+from sigmaRV_activity import *
 import pylab as plt
-import rvs, sys
+import rvs, sys, os
 from uncertainties import unumpy as unp
 
 
@@ -16,8 +17,9 @@ G, rhoEarth, c, h = 6.67e-11, 5.51, 299792458., 6.62607004e-34
 
 
 def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
-                      Z=0, sigmaRV_activity=0., sigmaRV_noisefloor=.5,
-                      protseed=None, testplanet_sigmaKfrac=0, verbose=True):
+                      Z=0, sigmaRV_activity=0, sigmaRV_planets=0,
+                      sigmaRV_noisefloor=.5, protseed=None,
+                      testplanet_sigmaKfrac=0, verbose=True):
     '''
     Estimate the number of RVs required to measure the mass of a transiting 
     TESS planet at a particular detection significance with a particular 
@@ -45,6 +47,10 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
         The assumed metallicity ([Fe/H]) of the TESS star in solar units
     `sigmaRV_activity': scalar
         An additive source of RV uncertainty from RV activity or jitter in m/s. 
+        To be added in quadrature to the photon-noise RV precision derived for 
+        the TESS star
+    `sigmaRV_planets': scalar
+        An additive source of RV uncertainty from unseen planets in m/s. 
         To be added in quadrature to the photon-noise RV precision derived for 
         the TESS star
     `protseed': scalar
@@ -114,7 +120,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     B_V = Bmag - Vmag
     
     # compute vsini
-    Prot = get_prot_gyrochronology(B_V)
+    Prot = draw_prot_empirical(Ms)
     I = abs(np.arccos(np.random.uniform(-1,1)))
     vsini = 2*np.pi * rvs.Rsun2m(Rs)*1e-3 * np.sin(I) / rvs.days2sec(Prot) 
 
@@ -125,6 +131,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
     Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff = \
                         estimate_Nrv(startheta, planettheta, instrumenttheta,
                                      sigmaRV_activity=sigmaRV_activity,
+                                     sigmaRV_planets=sigmaRV_planets,
                                      sigmaRV_noisefloor=sigmaRV_noisefloor,
                                      testplanet_sigmaKfrac=testplanet_sigmaKfrac)
 
@@ -138,8 +145,8 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
 
     # Save values
     save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
-                 Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, R,
-                 aperture_m, QE, sigmaRV_phot, sigmaRV_eff, texp, tobserving,
+                 Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, sigmaRV_planets,
+                 R, aperture_m, QE, sigmaRV_phot, sigmaRV_eff, texp, tobserving,
                  Nrv)
     return Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff
 
@@ -447,23 +454,28 @@ def get_sigmaK_target_v2(K, fracsigmaK):
 
 
 def save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
-                 Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, R,
-                 aperture_m, QE, sigmaRV_phot, sigmaRV_eff, texp, tobserving,
+                 Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, sigmaRV_planets,
+                 R, aperture_m, QE, sigmaRV_phot, sigmaRV_eff, texp, tobserving,
                  Nrv):
     '''
     Write the stellar, planet, observatory parameters, and results to a text 
     file.
     '''
-    f = open('results/TESSplanet%.4d_%s.dat'%(planetindex, ''.join(band_strs)),
+    try:
+        os.mkdir('Results')
+    except OSError:
+        pass
+    f = open('Results/TESSplanet%.4d_%s.dat'%(planetindex, ''.join(band_strs)),
              'w')
     g = ''
     for i in range(len(mags)):
         g += '# %s = %.3f\n'%(band_strs[i], mags[i])
+
     g += '# ra (deg), dec (deg), P (days), rp (REarth), mp (MEarth), ' + \
          'K (m/s), S (SEarth), Ms (MSun), Rs (RSun), Teff (K), dist (pc), ' + \
          'Prot (days), vsini (km/s), Z ([Fe/H]), sigmaRV_act (m/s), ' + \
-         'R (l/dl), aperture (m), QE, sigmaRV_phot (m/s), ' + \
-         'sigmaRV_eff (m/s), texp (min), tobs_tot (hrs), Nrv\n'
-    g += '%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.2f\t%.2f\t%i\t%.3f\t%.3f\t%.3f\t%.1f\t%.3f\t%i\t%.2f\t%.2f\t%.3f\t%.3f\t%.3f\t%.3f\t%i'%(ra, dec, P, rp, mp, K, S, Ms, Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, R, aperture_m, QE, sigmaRV_phot, sigmaRV_eff, texp, tobserving, Nrv)
+         'sigmaRV_planets (m/s), R (l/dl), aperture (m), QE, ' + \
+         'sigmaRV_phot (m/s), sigmaRV_eff (m/s), texp (min), tobs_tot (hrs), Nrv\n'
+    g += '%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.2f\t%.2f\t%i\t%.3f\t%.3f\t%.3f\t%.1f\t%.3f\t%.3f\t%i\t%.2f\t%.2f\t%.3f\t%.3f\t%.3f\t%.3f\t%i'%(ra, dec, P, rp, mp, K, S, Ms, Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, sigmaRV_planets, R, aperture_m, QE, sigmaRV_phot, sigmaRV_eff, texp, tobserving, Nrv)
     f.write(g)
     f.close()
