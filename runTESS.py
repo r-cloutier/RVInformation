@@ -236,7 +236,7 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
 
     # estimate sigmaRV due to stellar activity
     if sigma_activity != 0:
-        sigma_activity = get_sigmaRV_activity(Teff_round, Prot, B_V)
+        sigma_activity = get_sigmaRV_activity(Teff_round, Ms, Prot, B_V)
         
     # estimate sigmaRV due to unseen planets
     if sigmaRV_planets != 0:
