@@ -1,4 +1,5 @@
-from imports import *
+import numpy as np
+import pylab as plt
 from matplotlib.colors import LogNorm
 
 # Read in the TESS simulation data from Sullivan et al. 2015
