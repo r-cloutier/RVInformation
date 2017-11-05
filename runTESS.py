@@ -6,7 +6,7 @@ import numpy as np
 from get_tess_data import get_TESS_data
 from compute_sigmaRV import *
 from sigmaRV_activity import *
-from sigmaRV_activity import *
+from sigmaRV_planets import *
 import pylab as plt
 import rvs, sys, os
 from uncertainties import unumpy as unp
@@ -16,8 +16,8 @@ global G, rhoEarth, c, h
 G, rhoEarth, c, h = 6.67e-11, 5.51, 299792458., 6.62607004e-34
 
 
-def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m, QE,
-                      Z=0, sigmaRV_activity=0, sigmaRV_planets=0,
+def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
+                      QE=.1, Z=0, sigmaRV_activity=0, sigmaRV_planets=0,
                       sigmaRV_noisefloor=.5, protseed=None,
                       testplanet_sigmaKfrac=0, verbose=True):
     '''
@@ -186,6 +186,10 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
         An additive source of RV uncertainty from RV activity or jitter in m/s. 
         To be added in quadrature to the photon-noise RV precision derived for 
         the TESS star
+    `sigmaRV_activity': scalar
+        An additive source of RV uncertainty from unseen planets in m/s. 
+        To be added in quadrature to the photon-noise RV precision derived for 
+        the TESS star
     `texpmin': scalar
         The minimum exposure time in minutes. Required to mitigate the effects 
         of stellar pulsations and granulation
@@ -242,12 +246,15 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
                    else float(sigmaRV_noisefloor)
 
     # estimate sigmaRV due to stellar activity
-    if sigma_activity != 0:
-        sigma_activity = get_sigmaRV_activity(Teff_round, Ms, Prot, B_V)
+    if sigmaRV_activity != 0:
+        print 'Sampling RV activity...'
+        sigmaRV_activity = get_sigmaRV_activity(Teff_round, Ms, Prot, B_V)
         
     # estimate sigmaRV due to unseen planets
     if sigmaRV_planets != 0:
-        sigmaRV_planets = get_sigmaRV_planets(P, mult)
+        print 'Sampling RV planets...'
+        sigmaRV_planets = get_sigmaRV_planets(P, rp, Teff_round, Ms, mult,
+                                              sigmaRV_phot)
     
     # compute effective sigmaRV
     sigmaRV_eff = np.sqrt(sigmaRV_phot**2 + sigmaRV_activity**2 + sigmaRV_planets**2)
@@ -257,7 +264,7 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
         sigmaK_target = get_sigmaK_target_v2(K, testplanet_sigmaKfrac)
     else:                          # use for TESS planets
         sigmaK_target = get_sigmaK_target_v1(rp, K, P, Ms)
-    Nrv = int(np.round(2 * (sigmaRV_eff / sigmaK_target)**2))
+    Nrv = np.round(2 * (sigmaRV_eff / sigmaK_target)**2)
 
     toverhead = 5.
     tobserving = (texp+toverhead)*Nrv / 6e1
@@ -429,7 +436,7 @@ def get_stellar_mass(P, mp, K):
 
 
 def get_sigmaK_target_v1(rp, K, P, Ms, sigP=5e-5,
-                         fracsigrp=1e-1, fracsigMs=1e-1, fracsigrho_target=.2):
+                         fracsigrp=.05, fracsigMs=.1, fracsigrho_target=.2):
     '''
     Compute the K detection significance required to measure a planet's density 
     at a specific fractional precision.
@@ -437,20 +444,23 @@ def get_sigmaK_target_v1(rp, K, P, Ms, sigP=5e-5,
     urp, uP, uMs = unp.uarray(rp, rp*fracsigrp), unp.uarray(P, sigP), \
                    unp.uarray(Ms, Ms*fracsigMs)
 
-    fracsigKs = np.logspace(-2,1,100)
+    fracsigKs = np.logspace(-2,0,100)
     fracsigrho = np.zeros(fracsigKs.size)
     
     for i in range(fracsigKs.size):
         uK = unp.uarray(K, K*fracsigKs[i])
         ump = rvs.RV_mp(uP, uMs, uK)
         urho = rhoEarth * ump / urp**3
-        fracsigrho[i] = unp.nominal_values(urho) / unp.std_devs(urho)
+        fracsigrho[i] =  unp.std_devs(urho) / unp.nominal_values(urho)
 
-    return None
+    # find corresponding fractional sigmaK
+    fint = interp1d(fracsigrho, fracsigKs)
+
+    return float(fint(fracsigrho_target))
 
 
 def get_sigmaK_target_v2(K, fracsigmaK):
-    return fracsigmaK * K
+    return float(fracsigmaK * K)
 
 
 def save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
