@@ -1,6 +1,6 @@
 import numpy as np
 import glob
-import pylab as plt
+import cPickle as pickle
 
 
 class RVInformation:
@@ -10,6 +10,7 @@ class RVInformation:
         self.files = np.array(glob.glob('Results/TESS*'))
         self.nfiles = self.files.size
         self._get_data()
+	self._pickleobject()
 
 
     def _initialize_arrays(self):
@@ -51,3 +52,17 @@ class RVInformation:
                 mags.append(float(g[j].split(' ')[3]))
             self.bands.append(bands)
             self.mags.append(mags)
+
+
+    def _pickleobject(self):
+	try:
+	    os.mkdir('pickles')
+	except OSError:
+	    pass
+	f = open('pickles/RVInformation', 'wb')
+	pickle.dump(self, f)
+	f.close()
+
+
+if __name__ == '__main__':
+    self = RVInformation()
