@@ -19,7 +19,7 @@ G, rhoEarth, c, h = 6.67e-11, 5.51, 299792458., 6.62607004e-34
 def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
                       QE=.1, Z=0, sigmaRV_activity=0, sigmaRV_planets=0,
                       sigmaRV_noisefloor=.5, testingseed=False,
-                      testplanet_sigmaKfrac=0, verbose=True):
+                      testplanet_sigmaKfrac=0, systnum=0, verbose=True):
     '''
     Estimate the number of RVs required to measure the mass of a transiting 
     TESS planet at a particular detection significance with a particular 
@@ -60,7 +60,9 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
         If 0, assume we are calculating a TESS planet and use its mass to 
         determine the required constraint on the K measurement uncertainty 
         (sigmaK). Otherwise, set this value to the fractional K measurement 
-        uncertainty as is done for test cases (e.g. 0.33 for GJ1132)  
+        uncertainty as is done for test cases (e.g. 0.33 for GJ1132)
+    `systnum': scalar
+        System index used when saving the simulation results
     `verbose': boolean
         If True, results for this star are printed to screen
 
@@ -151,7 +153,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
     save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
                  Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, sigmaRV_planets,
                  R, aperture_m, QE, sigmaK_target/K, sigmaRV_phot, sigmaRV_eff, texp,
-                 tobserving, Nrv)
+                 tobserving, Nrv, systnum)
     return Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff
 
 
@@ -467,7 +469,7 @@ def get_sigmaK_target_v2(K, fracsigmaK):
 def save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
                  Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, sigmaRV_planets,
                  R, aperture_m, QE, fracsigmaK_target, sigmaRV_phot, sigmaRV_eff,
-                 texp, tobserving, Nrv):
+                 texp, tobserving, Nrv, systnum):
     '''
     Write the stellar, planet, observatory parameters, and results to a text 
     file.
@@ -476,7 +478,8 @@ def save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
         os.mkdir('Results')
     except OSError:
         pass
-    f = open('Results/TESSplanet%.4d_%s.dat'%(planetindex, ''.join(band_strs)),
+    f = open('Results/TESSplanet%.4d_%s_%.4d.dat'%(planetindex,
+                                                   ''.join(band_strs), systnum),
              'w')
     g = ''
     for i in range(len(mags)):

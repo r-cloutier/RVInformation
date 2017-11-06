@@ -1,5 +1,5 @@
 import numpy as np
-import glob
+import glob, os
 import cPickle as pickle
 
 
@@ -14,6 +14,7 @@ class RVInformation:
 
 
     def _initialize_arrays(self):
+        self.systnums = np.zeros(self.nfiles)
         self.ras, self.decs = np.zeros(self.nfiles), np.zeros(self.nfiles)
         self.Ps, self.rps = np.zeros(self.nfiles), np.zeros(self.nfiles)
         self.mps, self.Ks = np.zeros(self.nfiles), np.zeros(self.nfiles)
@@ -41,6 +42,7 @@ class RVInformation:
         for i in range(self.nfiles):
             # Get saved properties aside the magnitudes
             self.ras[i], self.decs[i], self.Ps[i], self.rps[i], self.mps[i], self.Ks[i], self.Fs[i], self.Mss[i], self.Rss[i], self.Teffs[i], self.dists[i], self.Prots[i], self.vsinis[i], self.Zs[i], self.sigmaRV_acts[i], self.sigmaRV_planets[i], self.Rs[i], self.apertures[i], self.QEs[i], self.fracsigmaK_targets[i], self.sigmaRV_phot[i], self.sigmaRV_eff[i], self.texps[i], self.tobss[i], self.Nrvs[i] = np.loadtxt(self.files[i])
+            self.systnums[i] = int(self.files[i].split('planet')[-1].split('_')[0])
 
             # Get bands and magnitudes
             f = open(self.files[i], 'r')
