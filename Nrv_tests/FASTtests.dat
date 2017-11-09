@@ -2,13 +2,13 @@
 GJ1132	3.38	.92	25	0
 GJ1214	4.96	1.6	21	0
 LHS1140	5.24	1.1	144	0
-ProxCen	1.14	.21	54	0
-GJ3138	2.87	.28	198	1
-GJ3323	2.85	.32	154	1
-GJ273	2.75	.15	278	1
-GJ628	2.72	.2	187	1
-GJ3293	7.73	.32	207	1
-YZCeti	3.36	.32	211	1
+#ProxCen	1.14	.21	54	0
+#GJ3138	2.87	.28	198	1
+#GJ3323	2.85	.32	154	1
+#GJ273	2.75	.15	278	1
+#GJ628	2.72	.2	187	1
+#GJ3293	7.73	.32	207	1
+#YZCeti	3.36	.32	211	1
 # http://adsabs.harvard.edu/abs/2015ApJ...800..135D  HARPS-N only
 Kep93	1.86	.27	86	1
 # http://adsabs.harvard.edu/abs/2005A%26A...444L..15B
@@ -30,4 +30,7 @@ K10HIR	3.55	.59	72	1
 # http://adsabs.harvard.edu/abs/2013Natur.503..381H
 Kep78	2.6	.4	79	0
 # http://adsabs.harvard.edu/abs/1995Natur.378..355M
-51Peg	13.	3.	35	0
+#51Peg	13.	3.	35	0
+# http://adsabs.harvard.edu/abs/2014ApJ...785..126K
+GJ436	3.78
+HATP2	31.7
