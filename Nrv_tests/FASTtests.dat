@@ -1,14 +1,33 @@
-# name, sigmaRV_eff (m/s), sigmaK (m/s), Nrv_true, Nrv_calc
-GJ1132	3.38	.92	25	27
-GJ1214	4.96	1.6	21	19
-ProxCen	1.14	.21	54	59
-GJ3138	2.87	.28	198	210
-GJ3323	2.85	.32	154	159
-#GJ273	2.75	.15	278	672
-#GJ628	2.72	.2	187	370
-#GJ3293	7.73	.32	207	1164
-YZCeti	3.36	.32	211	220
-Kep93	1.6	.27	86	70
-H189733	15.	6.	12	12
-H209458	13.8	2.	150	177
-K2-18	4.56	.72	75	80
+# name, sigmaRV_eff (m/s), sigmaK (m/s), Nrv_true, known multi-planet system?
+GJ1132	3.38	.92	25	0
+GJ1214	4.96	1.6	21	0
+LHS1140	5.24	1.1	144	0
+ProxCen	1.14	.21	54	0
+GJ3138	2.87	.28	198	1
+GJ3323	2.85	.32	154	1
+GJ273	2.75	.15	278	1
+GJ628	2.72	.2	187	1
+GJ3293	7.73	.32	207	1
+YZCeti	3.36	.32	211	1
+# http://adsabs.harvard.edu/abs/2015ApJ...800..135D  HARPS-N only
+Kep93	1.86	.27	86	1
+# http://adsabs.harvard.edu/abs/2005A%26A...444L..15B
+H189733	15.	6.	12	0
+# http://adsabs.harvard.edu/abs/2017arXiv170704292C
+K2-18	4.56	.72	75	1
+# http://adsabs.harvard.edu/abs/2007ApJ...671.2115B
+XO-2N	20.1	8.	10	0
+# http://adsabs.harvard.edu/abs/2014MNRAS.443.2517H
+CoRoT7	1.96	.68	71	1
+# http://adsabs.harvard.edu/abs/2011ApJ...730...10H
+H97658	2.78	.39	96	0
+# http://adsabs.harvard.edu/abs/2015ApJ...800...59V
+116454	2.01	.5	33	0
+# http://adsabs.harvard.edu/abs/2016ApJ...819...83W
+Kep10	3.55	.34	220	1
+# same paper as above but only hires data
+K10HIR	3.55	.59	72	1
+# http://adsabs.harvard.edu/abs/2013Natur.503..381H
+Kep78	2.6	.4	79	0
+# http://adsabs.harvard.edu/abs/1995Natur.378..355M
+51Peg	13.	3.	35	0

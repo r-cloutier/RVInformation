@@ -137,7 +137,7 @@ def logRhk2sigmaRV(logRhk, Teff, mean_only=False):
     return sigmaRVs
 
 
-def Prot2logRhk(Prot, Ms, mean_only=False):
+def Prot2logRhk_M(Prot, Ms, mean_only=False):
     '''
     Convert the stellar rotation period to the logRhk chromospheric index for 
     stars with masses less than 0.8 solar masses from Astudillo-Defru et al. 
