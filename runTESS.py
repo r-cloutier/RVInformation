@@ -134,11 +134,11 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
     planettheta = rp, mp, K, P, mult
     instrumenttheta = band_strs, R, aperture_m, QE
     Nrv, texp, tobserving, sigmaK_target, sigmaRV_phot, sigmaRV_eff = \
-                        estimate_Nrv(startheta, planettheta, instrumenttheta,
-                                     sigmaRV_activity=sigmaRV_activity,
-                                     sigmaRV_planets=sigmaRV_planets,
-                                     sigmaRV_noisefloor=sigmaRV_noisefloor,
-                                     testplanet_sigmaKfrac=testplanet_sigmaKfrac)
+                            estimate_Nrv(startheta, planettheta, instrumenttheta,
+                                         sigmaRV_activity=sigmaRV_activity,
+                                         sigmaRV_planets=sigmaRV_planets,
+                                         sigmaRV_noisefloor=sigmaRV_noisefloor,
+                                         testplanet_sigmaKfrac=testplanet_sigmaKfrac)
 
     if verbose:
         print '\n%35s = %.3f m/s'%('Photon-noise limited RV uncertainty',
@@ -267,7 +267,7 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
     if testplanet_sigmaKfrac != 0:     # use for testing
         sigmaK_target = get_sigmaK_target_v2(K, testplanet_sigmaKfrac)
     else:                          # use for TESS planets
-        sigmaK_target = get_sigmaK_target_v1(rp, K, P, Ms)
+        sigmaK_target = get_sigmaK_target_v3(P, Ms, K)
     Nrv = 2 * (sigmaRV_eff / sigmaK_target)**2
 
     toverhead = 5.
@@ -465,6 +465,24 @@ def get_sigmaK_target_v1(rp, K, P, Ms, sigP=5e-5,
 def get_sigmaK_target_v2(K, fracsigmaK):
     return float(fracsigmaK * K)
 
+
+def get_sigmaK_target_v3(P, Ms, K, sigP=5e-5, fracsigMs=.1):
+    '''
+    Compute the K detection significance required to measure a planet's mass at 
+    3 sigma.
+    '''
+    P = unp.uarray(P, sigP)
+    Ms = unp.uarray(Ms, fracsigMs*Ms)
+    sigKs = np.logspace(-2, np.log10(K), 1000)
+    detsig_mp = np.zeros(sigKs.size)
+    for i in range(sigKs.size):
+        Ktmp = unp.uarray(K, sigKs[i])
+        mp = rvs.RV_mp(P, Ms, Ktmp)
+        detsig_mp[i] = unp.nominal_values(mp) / unp.std_devs(mp)
+    # Get where sigK returns a 3sigma mass detection
+    fint = interp1d(detsig_mp, sigKs)
+    return float(fint(3))
+    
 
 def save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
                  Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, sigmaRV_planets,
