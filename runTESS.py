@@ -478,9 +478,14 @@ def save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
         os.mkdir('Results')
     except OSError:
         pass
-    f = open('Results/TESSplanet%.4d_%s_%.4d.dat'%(planetindex,
-                                                   ''.join(band_strs), systnum),
-             'w')
+    try:
+        os.mkdir('Results/star%.4d'%planetindex)
+    except OSError:
+        pass
+    f = open('Results/star%.4d/TESSplanet%.4d_%s_%.4d.dat'%(planetindex,
+                                                            planetindex,
+                                                            ''.join(band_strs),
+                                                            systnum), 'w')
     g = ''
     for i in range(len(mags)):
         g += '# %s = %.3f\n'%(band_strs[i], mags[i])

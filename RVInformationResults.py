@@ -66,5 +66,12 @@ class RVInformation:
 	f.close()
 
 
+def loadpickle(fname):
+    f = open(fname, 'rb')
+    self = pickle.load(f)
+    f.close()
+    return self
+
+
 if __name__ == '__main__':
     self = RVInformation()
