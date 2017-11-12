@@ -144,10 +144,10 @@ def get_sigmaRV_planets(P, rp, Teff, Ms, mult, sigmaRV_phot):
     '''
     # FGK star
     if Teff > 3800:
-        _,_,_,Ks = draw_FGK_planets(P, rp, mult, Ms)
+        _,_,_,Ks = draw_FGK_planets(P, rp, int(mult), Ms)
     # M dwarf
     else:
-        _,_,_,Ks = draw_M_planets(P, rp, mult, Ms)    
+        _,_,_,Ks = draw_M_planets(P, rp, int(mult), Ms)    
 
     # only include undetected planets with K < sigmaRV_phot
     Ks = Ks[Ks < sigmaRV_phot]
