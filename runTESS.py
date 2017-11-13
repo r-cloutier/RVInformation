@@ -376,6 +376,8 @@ def _get_absolute_stellar_magnitudes(Ms, logage=9):
     Mss,Mus,Mbs,Mvs,Mrs,Mis,Mjs,Mhs,Mks = Mss[g],Mus[g],Mbs[g],Mvs[g],Mrs[g], \
                                           Mis[g],Mjs[g],Mhs[g],Mks[g]
     g = abs(Mss-Ms) == np.min(abs(Mss-Ms))
+    if g.sum() > 1:
+	g = np.where(g)[0][0]
     Mu,Mb,Mv,Mr,Mi,Mj,Mh,Mk = Mus[g],Mbs[g],Mvs[g],Mrs[g],Mis[g],Mjs[g], \
                               Mhs[g],Mks[g]
     # Second set of isochrones (ZYJHK)
@@ -385,6 +387,8 @@ def _get_absolute_stellar_magnitudes(Ms, logage=9):
     g = logages2 == logage
     Mss2,MZs,MYs,MJs,MHs,MKs = Mss2[g],MZs[g],MYs[g],MJs[g],MHs[g],MKs[g]
     g = abs(Mss2-Ms) == np.min(abs(Mss2-Ms))
+    if g.sum() > 1:
+	g = np.where(g)[0][0]
     MZ,MY,MJ,MH,MK = MZs[g],MYs[g],MJs[g],MHs[g],MKs[g]    
 
     return Mu, Mb, Mv, Mr, Mi, MY, MJ, MH, MK 
