@@ -14,7 +14,9 @@ class RVInformation:
 
 
     def _initialize_arrays(self):
-        self.systnums = np.zeros(self.nfiles)
+        self.starnums, self.systnums = np.zeros(self.nfiles), \
+                                       np.zeros(self.nfiles)
+        self.spectrographs = np.zeros(self.nfiles, dtype=str)
         self.ras, self.decs = np.zeros(self.nfiles), np.zeros(self.nfiles)
         self.Ps, self.rps = np.zeros(self.nfiles), np.zeros(self.nfiles)
         self.mps, self.Ks = np.zeros(self.nfiles), np.zeros(self.nfiles)
@@ -42,7 +44,8 @@ class RVInformation:
         for i in range(self.nfiles):
             # Get saved properties aside the magnitudes
             self.ras[i], self.decs[i], self.Ps[i], self.rps[i], self.mps[i], self.Ks[i], self.Fs[i], self.Mss[i], self.Rss[i], self.Teffs[i], self.dists[i], self.Prots[i], self.vsinis[i], self.Zs[i], self.sigmaRV_acts[i], self.sigmaRV_planets[i], self.Rs[i], self.apertures[i], self.QEs[i], self.fracsigmaK_targets[i], self.sigmaRV_phot[i], self.sigmaRV_eff[i], self.texps[i], self.tobss[i], self.Nrvs[i] = np.loadtxt(self.files[i])
-            self.systnums[i] = int(self.files[i].split('planet')[-1].split('_')[0])
+            self.starnums[i] = int(self.files[i].split('star')[-1].split('/')[0])
+            self.systnums[i] = int(self.files[i].split('_')[-1].split('.')[0])
 
             # Get bands and magnitudes
             f = open(self.files[i], 'r')
@@ -54,7 +57,9 @@ class RVInformation:
                 mags.append(float(g[j].split(' ')[3]))
             self.bands.append(bands)
             self.mags.append(mags)
-
+            # 'O': optical & 'I': infrared
+            self.spectrographs[i] = 'O' if 'V' in self.bands[i] else 'I'
+            
 
     def _pickleobject(self):
 	try:
