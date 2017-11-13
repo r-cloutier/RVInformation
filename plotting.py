@@ -51,11 +51,35 @@ def plot_Nrv_F(self, pltt=True, label=False):
 
     g = self.Teffs_med > 0
 
-    ax.scatter(self.Fs_med_I[g], self.Nrvs_med_I[g], s=20*self.rps_med_I[g], c='r', alpha=.5)
-    ax.scatter(self.Fs_med_O[g], self.Nrvs_med_O[g], s=20*self.rps_med_I[g], c='b', alpha=.5)
-    ax.set_xscale('log'), ax.set_yscale('log')
-    ax.set_xlim((1e4,1e-1)), ax.set_ylim((1,1e3))
+    ax.errorbar(self.Fs_med[g], self.Nrvs_med_I[g], self.Nrvs_emed_I[g], fmt='r.',
+                ms=12, capsize=0, elinewidth=.5)
+    ax.errorbar(self.Fs_med[g], self.Nrvs_med_O[g], self.Nrvs_emed_O[g], fmt='b.',
+                ms=12, capsize=0, elinewidth=.5)
+
+    ax.set_xscale('log')#, ax.set_yscale('log')
+    ax.set_xlim((1e4,1e-1)), ax.set_ylim((1,2e2))
     ax.set_xlabel('Insolation ($S_{\oplus}$)'), ax.set_ylabel('$n_{RV}$')
+    
+    if pltt:
+        plt.show()
+    plt.close('all')
+
+
+def plot_Nrvratio(self, pltt=True, label=False):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ratio = unumpy.uarray(self.Nrvs_med_I, self.Nrvs_emed_I) / \
+            unumpy.uarray(self.Nrvs_med_O, self.Nrvs_emed_O)
+    
+    ax.errorbar(self.Teffs_med, unumpy.nominal_values(ratio), unumpy.std_devs(ratio),
+                fmt='k.', ms=12, capsize=0, elinewidth=.5)
+    xlim = ax.get_xlim()
+    ax.fill_between(list(xlim), np.ones(2), color='k', alpha=.2)
+
+    ax.set_yscale('log'), ax.set_ylim((1e-2,1e2)), ax.set_xlim(xlim)
+    ax.set_xlabel('Teff (K)'), ax.set_ylabel('$n_{RV,I} / n_{RV,O}$')
+    ax.minorticks_on()
     
     if pltt:
         plt.show()
