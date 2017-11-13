@@ -49,16 +49,14 @@ def plot_Nrv_F(self, pltt=True, label=False):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    # infrared spectrographs only
-    g = self.spectrographs == 'I'
-    _,Fs = median4star(self.starnums[g], self.Fs[g])
-    _,Nrvs = median4star(self.starnums[g], self.Nrvs[g])
-    _,rps = median4star(self.starnums[g], self.rps[g])
-    
-    ax.scatter(Fs, Nrvs, s=rps*10, alpha=.5)
-    ax.set_xscale('log'), ax.set_yscale('log')
-    ax.set_xlim((1e4,1e-1)), ax.set_ylim((1,3e2))
+    g = self.Teffs_med > 0
 
+    ax.scatter(self.Fs_med_I[g], self.Nrvs_med_I[g], s=20*self.rps_med_I[g], c='r', alpha=.5)
+    ax.scatter(self.Fs_med_O[g], self.Nrvs_med_O[g], s=20*self.rps_med_I[g], c='b', alpha=.5)
+    ax.set_xscale('log'), ax.set_yscale('log')
+    ax.set_xlim((1e4,1e-1)), ax.set_ylim((1,1e3))
+    ax.set_xlabel('Insolation ($S_{\oplus}$)'), ax.set_ylabel('$n_{RV}$')
+    
     if pltt:
         plt.show()
     plt.close('all')
