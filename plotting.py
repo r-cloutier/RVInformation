@@ -49,27 +49,16 @@ def plot_Nrv_F(self, pltt=True, label=False):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
+    # infrared spectrographs only
     g = self.spectrographs == 'I'
-    xarr = np.median(self.Fs[g])
+    _,Fs = median4star(self.starnums[g], self.Fs[g])
+    _,Nrvs = median4star(self.starnums[g], self.Nrvs[g])
+    _,rps = median4star(self.starnums[g], self.rps[g])
     
-    ax.scatter(self.Fs[g], self.Nrvs[g])
-    ax.set_xlim((1e3, 1e-1)), ax.set_ylim((0,200))
-    ax.set_xscale('log')
+    ax.scatter(Fs, Nrvs, s=rps*10, alpha=.5)
+    ax.set_xscale('log'), ax.set_yscale('log')
+    ax.set_xlim((1e4,1e-1)), ax.set_ylim((1,3e2))
 
     if pltt:
         plt.show()
     plt.close('all')
-
-
-def median4star(starnums, attribute):
-    '''
-    Get the median attribute across all iterations for a single star.
-    '''
-    assert starnums.shape == attribute.shape
-    unique_starnums = np.unique(starnums)
-    nstars = unique_starnums.size
-    attribute_out = np.zeros(nstars)
-    for i in range(nstars):
-        g = starnums == unique_starnums[i]
-        attribute_out[i] = np.median(attribute[g])
-    return unique_starnums, attribute_out
