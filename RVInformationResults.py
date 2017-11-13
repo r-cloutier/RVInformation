@@ -10,6 +10,8 @@ class RVInformation:
         self.files = np.array(glob.glob('Results/star*/TESS*'))
         self.nfiles = self.files.size
         self._get_data()
+	self._get_median_star_results()
+        self._get_median_star_results_per_spectrograph()
 	self._pickleobject()
 
 
@@ -60,6 +62,161 @@ class RVInformation:
             # 'O': optical & 'I': infrared
             self.spectrographs[i] = 'O' if 'V' in self.bands[i] else 'I'
             
+
+    def _initialize_median_arrays(self):
+        self.starnums_med = np.unique(self.starnums)
+	self.nstars = self.starnums_med.size
+        self.ras_med, self.decs_med = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.Ps_med, self.rps_med = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.mps_med, self.Ks_med = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.Fs_med, self.Mss_med = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.Rss_med, self.Teffs_med = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.dists_med, self.Prots_med = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.vsinis_med, self.Zs_med = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.sigmaRV_phot_med = np.zeros(self.nstars)
+        self.sigmaRV_acts_med = np.zeros(self.nstars)
+        self.sigmaRV_planets_med = np.zeros(self.nstars)
+        self.sigmaRV_eff_med = np.zeros(self.nstars)
+        self.Rs_med, self.apertures_med = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.QEs_med, self.texps_med = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.fracsigmaK_targets_med = np.zeros(self.nstars)
+        self.tobss_med, self.Nrvs_med = np.zeros(self.nstars), np.zeros(self.nstars)
+
+
+    def _get_median_star_results(self):
+	'''
+	Get the median value of each attribute for each star.
+	'''
+	self._initialize_median_arrays()
+	
+        for i in range(self.nstars):
+	    g = self.starnums == self.starnums_med[i]
+	    self.ras_med[i] = np.median(self.ras[g])
+ 	    self.decs_med[i] = np.median(self.decs[g])
+            self.Ps_med[i] = np.median(self.Ps[g])
+            self.rps_med[i] = np.median(self.rps[g])
+            self.mps_med[i] = np.median(self.mps[g])
+            self.Ks_med[i] = np.median(self.Ks[g])
+            self.Fs_med[i] = np.median(self.Fs[g])
+            self.Mss_med[i] = np.median(self.Mss[g])
+            self.Rss_med[i] = np.median(self.Rss[g])
+            self.Teffs_med[i] = np.median(self.Teffs[g])
+            self.dists_med[i] = np.median(self.dists[g])
+            self.Prots_med[i] = np.median(self.Prots[g])
+            self.vsinis_med[i] = np.median(self.vsinis[g])
+            self.Zs_med[i] = np.median(self.Zs[g])
+            self.sigmaRV_acts_med[i] = np.median(self.sigmaRV_acts[g])
+            self.sigmaRV_planets_med[i] = np.median(self.sigmaRV_planets[g])
+            self.Rs_med[i] = np.median(self.Rs[g])
+            self.apertures_med[i] = np.median(self.apertures[g])
+            self.QEs_med[i] = np.median(self.QEs[g])
+            self.fracsigmaK_targets_med[i] = np.median(self.fracsigmaK_targets[g])
+            self.sigmaRV_phot_med[i] = np.median(self.sigmaRV_phot[g])
+            self.sigmaRV_eff_med[i] = np.median(self.sigmaRV_eff[g])
+            self.texps_med[i] = np.median(self.texps[g])
+            self.tobss_med[i] = np.median(self.tobss[g])
+            self.Nrvs_med[i] = np.median(self.Nrvs[g])
+
+
+    def _initialize_median_arrays_per_spectrograph(self):
+        # Optical spectrographs
+        self.ras_med, self.decs_med_O = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.Ps_med_O, self.rps_med_O = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.mps_med_O, self.Ks_med_O = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.Fs_med_O, self.Mss_med_O = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.Rss_med_O, self.Teffs_med_O = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.dists_med_O, self.Prots_med_O = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.vsinis_med_O, self.Zs_med_O = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.sigmaRV_phot_med_O = np.zeros(self.nstars)
+        self.sigmaRV_acts_med_O = np.zeros(self.nstars)
+        self.sigmaRV_planets_med_O = np.zeros(self.nstars)
+        self.sigmaRV_eff_med_O = np.zeros(self.nstars)
+        self.Rs_med_O, self.apertures_med_O = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.QEs_med_O, self.texps_med_O = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.fracsigmaK_targets_med_O = np.zeros(self.nstars)
+        self.tobss_med_O, self.Nrvs_med_O = np.zeros(self.nstars), np.zeros(self.nstars)
+        # Infrared spectrographs
+        self.ras_med_I, self.decs_med_I = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.Ps_med_I, self.rps_med_I = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.mps_med_I, self.Ks_med_I = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.Fs_med_I, self.Mss_med_I = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.Rss_med_I, self.Teffs_med_I = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.dists_med_I, self.Prots_med_I = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.vsinis_med_I, self.Zs_med_I = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.sigmaRV_phot_med_I = np.zeros(self.nstars)
+        self.sigmaRV_acts_med_I = np.zeros(self.nstars)
+        self.sigmaRV_planets_med_I = np.zeros(self.nstars)
+        self.sigmaRV_eff_med_I = np.zeros(self.nstars)
+        self.Rs_med_I, self.apertures_med_I = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.QEs_med_I, self.texps_med_I = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.fracsigmaK_targets_med_I = np.zeros(self.nstars)
+        self.tobss_med_I, self.Nrvs_med_I = np.zeros(self.nstars), np.zeros(self.nstars)
+
+
+    def _get_median_star_results_per_spectrograph(self):
+	'''
+	Get the median value of each attribute for each star.
+	'''
+	self._initialize_median_arrays_per_spectrograph()
+	
+        for i in range(self.nstars):
+
+            opt = (self.starnums == self.starnums_med[i]) & \
+                  (self.spectrographs == 'O')
+            self.ras_med_O[i] = np.median(self.ras[opt])
+ 	    self.decs_med_O[i] = np.median(self.decs[opt])
+            self.Ps_med_O[i] = np.median(self.Ps[opt])
+            self.rps_med_O[i] = np.median(self.rps[opt])
+            self.mps_med_O[i] = np.median(self.mps[opt])
+            self.Ks_med_O[i] = np.median(self.Ks[opt])
+            self.Fs_med_O[i] = np.median(self.Fs[opt])
+            self.Mss_med_O[i] = np.median(self.Mss[opt])
+            self.Rss_med_O[i] = np.median(self.Rss[opt])
+            self.Teffs_med_O[i] = np.median(self.Teffs[opt])
+            self.dists_med_O[i] = np.median(self.dists[opt])
+            self.Prots_med_O[i] = np.median(self.Prots[opt])
+            self.vsinis_med_O[i] = np.median(self.vsinis[opt])
+            self.Zs_med_O[i] = np.median(self.Zs[opt])
+            self.sigmaRV_acts_med_O[i] = np.median(self.sigmaRV_acts[opt])
+            self.sigmaRV_planets_med_O[i] = np.median(self.sigmaRV_planets[opt])
+            self.Rs_med_O[i] = np.median(self.Rs[opt])
+            self.apertures_med_O[i] = np.median(self.apertures[opt])
+            self.QEs_med_O[i] = np.median(self.QEs[opt])
+            self.fracsigmaK_targets_med_O[i] = np.median(self.fracsigmaK_targets[opt])
+            self.sigmaRV_phot_med_O[i] = np.median(self.sigmaRV_phot[opt])
+            self.sigmaRV_eff_med_O[i] = np.median(self.sigmaRV_eff[opt])
+            self.texps_med_O[i] = np.median(self.texps[opt])
+            self.tobss_med_O[i] = np.median(self.tobss[opt])
+            self.Nrvs_med_O[i] = np.median(self.Nrvs[opt])
+
+            nir = (self.starnums == self.starnums_med[i]) & \
+                  (self.spectrographs == 'I')
+            self.ras_med_I[i] = np.median(self.ras[nir])
+ 	    self.decs_med_I[i] = np.median(self.decs[nir])
+            self.Ps_med_I[i] = np.median(self.Ps[nir])
+            self.rps_med_I[i] = np.median(self.rps[nir])
+            self.mps_med_I[i] = np.median(self.mps[nir])
+            self.Ks_med_I[i] = np.median(self.Ks[nir])
+            self.Fs_med_I[i] = np.median(self.Fs[nir])
+            self.Mss_med_I[i] = np.median(self.Mss[nir])
+            self.Rss_med_I[i] = np.median(self.Rss[nir])
+            self.Teffs_med_I[i] = np.median(self.Teffs[nir])
+            self.dists_med_I[i] = np.median(self.dists[nir])
+            self.Prots_med_I[i] = np.median(self.Prots[nir])
+            self.vsinis_med_I[i] = np.median(self.vsinis[nir])
+            self.Zs_med_I[i] = np.median(self.Zs[nir])
+            self.sigmaRV_acts_med_I[i] = np.median(self.sigmaRV_acts[nir])
+            self.sigmaRV_planets_med_I[i] = np.median(self.sigmaRV_planets[nir])
+            self.Rs_med_I[i] = np.median(self.Rs[nir])
+            self.apertures_med_I[i] = np.median(self.apertures[nir])
+            self.QEs_med_I[i] = np.median(self.QEs[nir])
+            self.fracsigmaK_targets_med_I[i] = np.median(self.fracsigmaK_targets[nir])
+            self.sigmaRV_phot_med_I[i] = np.median(self.sigmaRV_phot[nir])
+            self.sigmaRV_eff_med_I[i] = np.median(self.sigmaRV_eff[nir])
+            self.texps_med_I[i] = np.median(self.texps[nir])
+            self.tobss_med_I[i] = np.median(self.tobss[nir])
+            self.Nrvs_med_I[i] = np.median(self.Nrvs[nir])
+
 
     def _pickleobject(self):
 	try:
