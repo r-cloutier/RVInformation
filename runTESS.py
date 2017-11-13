@@ -350,7 +350,7 @@ def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms):
     return mags
 
 
-def _get_absolute_stellar_magnitudes(Ms, logage=9):
+def _get_absolute_stellar_magnitudes(Ms):
     '''
     Get the absolute magnitudes of a star with a given stellar mass at a 
     given age using the isochrones from 2005A&A...436..895G
@@ -359,15 +359,17 @@ def _get_absolute_stellar_magnitudes(Ms, logage=9):
     ----------
     `Ms': scalar
         The stellar mass in MSun
-    `logage': scalar
-        The log base 10 of the age of the star in years
-
+    
     Returns
     -------
     `mags': numpy.array
         The absolute magnitudes of the star 
 
     '''
+    # Appoximate MS lifetime to see at what age to obtain colours
+    logtMS_yrs = np.log10(1e10 * (1./Ms)**(2.5))
+    logage = round(logtMS_yrs*.77 / 5e-2) * 5e-2   # get ~3/4 through MS
+
     # First set of isochrones (ubvri)
     logages,Mss,Mus,Mbs,Mvs,Mrs,Mis,Mjs,Mhs,Mks = \
                                 np.loadtxt('input_data/isoc_z019_ubvrijhk.dat',
