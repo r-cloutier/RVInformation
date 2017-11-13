@@ -48,7 +48,12 @@ def _get_F8(Teff):
     Teffs, F8 = Teffs[g], F8[g]
 
     # draw a value of F8
-    g = (Teffs <= Teff*1.1) & (Teffs >= Teff*.9)
+    if Teff < Teffs.min():
+	g = np.argsort(Teffs)[:10]
+    elif Teff > Teffs.max():
+	g = np.argsort(Teffs)[-10::]
+    else:
+    	g = (Teffs <= Teff*1.1) & (Teffs >= Teff*.9)
     return np.random.choice(F8[g]) + np.random.rand() * 2e-2
 
 
@@ -338,12 +343,12 @@ def get_sigmaRV_activity(Teff, Ms, Prot, B_V):
     Estimate the RV rms due to stellar activity (measured in the optical).
     '''   
     # slowly rotating FGK star
-    if Teff >= 4090 and Prot > 10:
+    if Teff >= 4e3 and Prot > 10:
         F8 = _get_F8(Teff)
         sigmaRV_act = F82sigmaRV(F8, Teff)        
 
     # rapidly rotating FGK star
-    elif Teff >= 4090:
+    elif Teff >= 4e3:
         logRhk = Prot2logRhk(Prot, B_V)
         sigmaRV_act = logRhk2sigmaRV(logRhk, Teff)
 
