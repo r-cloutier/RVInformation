@@ -7,7 +7,7 @@ class RVInformation:
 
     def __init__(self):
 
-        self.files = np.array(glob.glob('Results/TESS*'))
+        self.files = np.array(glob.glob('Results/star*/TESS*'))
         self.nfiles = self.files.size
         self._get_data()
 	self._pickleobject()
