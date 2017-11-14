@@ -110,9 +110,9 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
 
     # Round Teff and logg
     Teffs = np.append(np.arange(23e2,7e3,1e2), np.arange(7e3,121e2,2e2))
-    Teff_round = Teffs[abs(Teffs-Teff) == np.min(abs(Teffs-Teff))]
+    Teff_round = Teffs[abs(Teffs-Teff) == np.min(abs(Teffs-Teff))][0]
     loggs = np.arange(0,6.1,.5)
-    logg_round = loggs[abs(loggs-logg) == np.min(abs(loggs-logg))]
+    logg_round = loggs[abs(loggs-logg) == np.min(abs(loggs-logg))][0]
 
     # Get the stellar magnitudes in the desired bands scaled to the results
     # from Sullivan
@@ -374,7 +374,7 @@ def _get_absolute_stellar_magnitudes(Ms):
     logages,Mss,Mus,Mbs,Mvs,Mrs,Mis,Mjs,Mhs,Mks = \
                                 np.loadtxt('input_data/isoc_z019_ubvrijhk.dat',
                                 usecols=(0,1,7,8,9,10,11,12,13,14)).T
-    g = logages == logage
+    g = abs(logages-logage) == np.min(abs(logages-logage))
     Mss,Mus,Mbs,Mvs,Mrs,Mis,Mjs,Mhs,Mks = Mss[g],Mus[g],Mbs[g],Mvs[g],Mrs[g], \
                                           Mis[g],Mjs[g],Mhs[g],Mks[g]
     g = abs(Mss-Ms) == np.min(abs(Mss-Ms))
@@ -386,7 +386,7 @@ def _get_absolute_stellar_magnitudes(Ms):
     logages2,Mss2,MZs,MYs,MJs,MHs,MKs = \
                                 np.loadtxt('input_data/isoc_z019_ZYJHK.dat',
                                 usecols=(0,1,7,8,9,10,11)).T
-    g = logages2 == logage
+    g = abs(logages2-logage) == np.min(abs(logages2-logage))
     Mss2,MZs,MYs,MJs,MHs,MKs = Mss2[g],MZs[g],MYs[g],MJs[g],MHs[g],MKs[g]
     g = abs(Mss2-Ms) == np.min(abs(Mss2-Ms))
     if g.sum() > 1:
