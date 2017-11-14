@@ -66,17 +66,17 @@ class RVInformation:
             # get mags
             if 'V' in self.bands[i]:
                 self.spectrographs[i] = 'O'
-                self.Bmags[i], self.Vmags[i] = self.bands[i][0], self.bands[i][1] 
+                self.Bmags[i], self.Vmags[i] = self.mags[i][0], self.mags[i][1] 
             elif 'J' in self.bands[i]:
                 self.spectrographs[i] = 'I'
-                self.Ymags[i], self.Jmags[i], self.Hmags[i] = self.bands[i][0], \
-                                                              self.bands[i][1], \
-                                                              self.bands[i][2]
+                self.Ymags[i], self.Jmags[i], self.Hmags[i] = self.mags[i][0], \
+                                                              self.mags[i][1], \
+                                                              self.mags[i][2]
             else:
                 raise ValueError("Spectra band do not contain a reference band.")
 
             if 'K' in self.bands[i]:
-                self.Kmags[i] = self.bands[i][-1]
+                self.Kmags[i] = self.mags[i][-1]
                     
                 
 
@@ -88,9 +88,9 @@ class RVInformation:
         self.mps_med, self.Ks_med = np.zeros(self.nstars), np.zeros(self.nstars)
         self.Fs_med, self.Mss_med = np.zeros(self.nstars), np.zeros(self.nstars)
         self.Rss_med, self.Teffs_med = np.zeros(self.nstars), np.zeros(self.nstars)
-        self.Bmags_med, self.Vmags_med = np.zeros(self.nfiles), np.zeros(self.nfiles)
-        self.Ymags_med, self.Jmags_med = np.zeros(self.nfiles), np.zeros(self.nfiles)
-        self.Hmags_med, self.Kmags_med = np.zeros(self.nfiles), np.zeros(self.nfiles)
+        self.Bmags_med, self.Vmags_med = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.Ymags_med, self.Jmags_med = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.Hmags_med, self.Kmags_med = np.zeros(self.nstars), np.zeros(self.nstars)
         self.dists_med, self.Prots_med = np.zeros(self.nstars), np.zeros(self.nstars)
         self.vsinis_med, self.Zs_med = np.zeros(self.nstars), np.zeros(self.nstars)
         self.sigmaRV_phot_med = np.zeros(self.nstars)
@@ -131,12 +131,12 @@ class RVInformation:
             self.Mss_med[i] = np.median(self.Mss[g])
             self.Rss_med[i] = np.median(self.Rss[g])
             self.Teffs_med[i] = np.median(self.Teffs[g])
-            self.Bmags_med[i] = np.median(self.Bmags[g])
-            self.Vmags_med[i] = np.median(self.Vmags[g])
-            self.Ymags_med[i] = np.median(self.Ymags[g])
-            self.Jmags_med[i] = np.median(self.Jmags[g])
-            self.Hmags_med[i] = np.median(self.Hmags[g])
-            self.Kmags_med[i] = np.median(self.Kmags[g])
+            self.Bmags_med[i] = np.median(self.Bmags[(g) & (self.Bmags != 0)])
+            self.Vmags_med[i] = np.median(self.Vmags[(g) & (self.Vmags != 0)])
+            self.Ymags_med[i] = np.median(self.Ymags[(g) & (self.Ymags != 0)])
+            self.Jmags_med[i] = np.median(self.Jmags[(g) & (self.Jmags != 0)])
+            self.Hmags_med[i] = np.median(self.Hmags[(g) & (self.Hmags != 0)])
+            self.Kmags_med[i] = np.median(self.Kmags[(g) & (self.Kmags != 0)])
             self.dists_med[i] = np.median(self.dists[g])
             self.Prots_med[i] = np.median(self.Prots[g])
             self.vsinis_med[i] = np.median(self.vsinis[g])
