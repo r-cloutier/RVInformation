@@ -136,7 +136,8 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
                 Prot, B_V
     planettheta = rp, mp, K, P, mult
     instrumenttheta = band_strs, R, aperture_m, QE
-    Nrv, texp, tobserving, sigmaK_target, sigmaRV_phot, sigmaRV_eff = \
+    Nrv,texp,tobs,sigK_target,sig_phot,sig_act,sig_planets,sig_eff = \
+    #Nrv, texp, tobserving, sigmaK_target, sigmaRV_phot, sigmaRV_eff = \
                             estimate_Nrv(startheta, planettheta,
                                          instrumenttheta,
                                          sigmaRV_activity=sigmaRV_activity,
@@ -155,10 +156,10 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
 
     # Save values
     save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
-                 Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity,
-                 sigmaRV_planets, R, aperture_m, QE, sigmaK_target/K,
-                 sigmaRV_phot, sigmaRV_eff, texp, tobserving, Nrv, systnum)
-    return Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff
+                 Rs, Teff, dist, Prot, vsini, Z, sig_act,
+                 sig_planets, R, aperture_m, QE, sigK_target/K,
+                 sig_phot, sig_eff, texp, tobs, Nrv, systnum)
+    return Nrv, texp, tobserving, sig_phot, sig_eff
 
 
 def estimate_Nrv(startheta, planettheta, instrumenttheta,
@@ -249,6 +250,13 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
         sigmaRVs[i] = compute_sigmaRV(wl, spec, mags[i], band_strs[i], texp,
                                       aperture_m, QE, R)
 
+    # Apply corrections from Artigau to bands with a known correction
+    correctionsYJHK = np.array([.47, .63, 1.59, 1.72])
+    sigmaRVs[band_strs == 'Y'] = sigmaRVs[band_strs == 'Y'] / corrections[0]
+    sigmaRVs[band_strs == 'J'] = sigmaRVs[band_strs == 'J'] / corrections[1]
+    sigmaRVs[band_strs == 'H'] = sigmaRVs[band_strs == 'H'] / corrections[2]
+    sigmaRVs[band_strs == 'K'] = sigmaRVs[band_strs == 'K'] / corrections[3]
+
     # Compute sigmaRV over all bands
     sigmaRV_phot = 1. / np.sqrt(np.sum(1./sigmaRVs**2))
     sigmaRV_phot = sigmaRV_phot if sigmaRV_phot > sigmaRV_noisefloor \
@@ -278,7 +286,7 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
     toverhead = 5.
     tobserving = (texp+toverhead)*Nrv / 6e1
     
-    return Nrv, texp, tobserving, sigmaK_target, sigmaRV_phot, sigmaRV_eff
+    return Nrv, texp, tobserving, sigmaK_target, sigmaRV_phot, sigmaRV_activity, sigmaRV_planets, sigmaRV_eff
 
  
 def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms):

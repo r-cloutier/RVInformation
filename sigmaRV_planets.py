@@ -131,7 +131,7 @@ def draw_M_planets(P, rp, nplanets, Ms):
 
 def _compute_sigmaRV_planets(Ks):
     rms = np.sin(np.linspace(0,2*np.pi,100)).std()
-    return np.sqrt(np.sum((Ks*rms)**2))
+    return float(np.sqrt(np.sum((Ks*rms)**2)))
 
 
 # rvs.is_Lagrangestable(Ps, Ms, mps, eccs)

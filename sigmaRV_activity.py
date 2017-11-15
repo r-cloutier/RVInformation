@@ -357,4 +357,4 @@ def get_sigmaRV_activity(Teff, Ms, Prot, B_V):
         logRhk = _get_logRhk_Mdwarf(Prot, Ms)
         sigmaRV_act = logRhk2sigmaRV(logRhk, Teff)
 
-    return sigmaRV_act
+    return float(sigmaRV_act)
