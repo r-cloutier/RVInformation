@@ -13,7 +13,7 @@ from scipy.misc import derivative
 
 
 global c, h, bands, SNRtarget, centralwlSNR
-c, h, SNRtarget, centralwlSNR = 299792458., 6.62607004e-34, 1e2, 1.25
+c, h, SNRtarget, centralwlSNR = 299792458., 6.62607004e-34, 3e2, 1.25
 bands = ['U','B','V','R','I','Y','J','H','K']
 
 
@@ -365,7 +365,7 @@ def _rescale_sigmaRV(sigmaRV, mag, band_str, texp_min, aperture_m, QE, R):
 
     '''
     snr = _get_snr(mag, band_str, texp_min, aperture_m, QE, R)
-    return sigmaRV * np.sqrt(SNRtarget / snr)
+    return sigmaRV * SNRtarget / snr
     
 
 def _get_snr(mag, band_str, texp_min, aperture_m, QE, R):
@@ -495,6 +495,7 @@ def exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
     else:
         raise ValueError("No reference band. Neither 'V' nor 'J' are " + \
                          'included in band_strs.')
+    mags, band_strs = np.ascontiguousarray(mags), np.ascontiguousarray(band_strs)
     reference_mag = float(mags[band_strs == reference_band])
     
     texps = np.arange(texpmin, texpmax+.1, .1)  # minutes
@@ -505,12 +506,12 @@ def exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
 
         
     if SNRs.min() > SNRtarget:
-        return texpmin
+        return float(texpmin)
     elif SNRs.max() < SNRtarget:
-        return texpmax
+        return float(texpmax)
     else:
         fint = interp1d(SNRs, texps)
-        return fint(SNRtarget)
+        return float(fint(SNRtarget))
 
 
 def _remove_tellurics_from_W(wl_band, W, transmission_threshold=.02):
