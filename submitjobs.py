@@ -1,6 +1,6 @@
 import os
 
-nplanets = 1984
+nplanets = 1700
 planetindices = range(nplanets)
 
 for planetindex in planetindices:
@@ -14,6 +14,6 @@ for planetindex in planetindices:
     h.write(g)
     h.close()
 
-    #os.system('qsub jobscript')
-    #os.system('rm jobscript')
-    os.system('cat jobscript')
+    os.system('qsub jobscript')
+    os.system('rm jobscript')
+    #os.system('cat jobscript')
