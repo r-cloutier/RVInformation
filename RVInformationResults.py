@@ -66,17 +66,20 @@ class RVInformation:
             # get mags
             if 'V' in self.bands[i]:
                 self.spectrographs[i] = 'H'
-                self.Bmags[i], self.Vmags[i] = self.mags[i][0], self.mags[i][1]
+                self.Bmags[i], self.Vmags[i] = self.mags[i]
+                
             elif 'K' in self.bands[i]:
                 self.spectrographs[i] = 'S'
-                self.Kmags[i] = self.mags[i][-1]
+                self.Ymags[i], self.Jmags[i] = self.mags[i][0:2]
+                self.Hmags[i], self.Kmags[i] = self.mags[i][2:4]
+
             elif 'J' in self.bands[i]:
                 self.spectrographs[i] = 'N'
-                self.Ymags[i], self.Jmags[i], self.Hmags[i] = self.mags[i][0], \
-                                                              self.mags[i][1], \
-                                                              self.mags[i][2]
+                self.Ymags[i], self.Jmags[i], self.Hmags[i] = self.mags[i]
+
             else:
-                raise ValueError("Spectra band do not contain a reference band.")
+                raise ValueError("Spectra band do not contain a reference " + \
+                                 "band.")
                     
                 
 
