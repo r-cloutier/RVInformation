@@ -65,18 +65,18 @@ class RVInformation:
 
             # get mags
             if 'V' in self.bands[i]:
-                self.spectrographs[i] = 'O'
-                self.Bmags[i], self.Vmags[i] = self.mags[i][0], self.mags[i][1] 
+                self.spectrographs[i] = 'H'
+                self.Bmags[i], self.Vmags[i] = self.mags[i][0], self.mags[i][1]
+            elif 'K' in self.bands[i]:
+                self.spectrographs[i] = 'S'
+                self.Kmags[i] = self.mags[i][-1]
             elif 'J' in self.bands[i]:
-                self.spectrographs[i] = 'I'
+                self.spectrographs[i] = 'N'
                 self.Ymags[i], self.Jmags[i], self.Hmags[i] = self.mags[i][0], \
                                                               self.mags[i][1], \
                                                               self.mags[i][2]
             else:
                 raise ValueError("Spectra band do not contain a reference band.")
-
-            if 'K' in self.bands[i]:
-                self.Kmags[i] = self.mags[i][-1]
                     
                 
 
@@ -220,7 +220,7 @@ class RVInformation:
         for i in range(self.nstars):
 
             opt = (self.starnums == self.starnums_med[i]) & \
-                  (self.spectrographs == 'O')
+                  (self.spectrographs == 'H')
             self.Prots_med_O[i] = np.median(self.Prots[opt])
             self.vsinis_med_O[i] = np.median(self.vsinis[opt])
             self.sigmaRV_acts_med_O[i] = np.median(self.sigmaRV_acts[opt])
@@ -244,7 +244,7 @@ class RVInformation:
             self.Nrvs_emed_O[i] = MAD(self.Nrvs[opt])
 
             nir = (self.starnums == self.starnums_med[i]) & \
-                  (self.spectrographs == 'I')
+                  (self.spectrographs == 'N')
             self.Prots_med_I[i] = np.median(self.Prots[nir])
             self.vsinis_med_I[i] = np.median(self.vsinis[nir])
             self.sigmaRV_acts_med_I[i] = np.median(self.sigmaRV_acts[nir])
