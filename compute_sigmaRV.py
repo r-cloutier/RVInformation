@@ -13,7 +13,7 @@ from scipy.misc import derivative
 
 
 global c, h, bands, SNRtarget, centralwlSNR
-c, h, SNRtarget, centralwlSNR = 299792458., 6.62607004e-34, 3e2, 1.25
+c, h, SNRtarget, centralwlSNR = 299792458., 6.62607004e-34, 5e2, 1.25
 bands = ['U','B','V','R','I','Y','J','H','K']
 
 
