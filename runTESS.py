@@ -158,7 +158,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
                  Rs, Teff, dist, Prot, vsini, Z, sig_act,
                  sig_planets, R, aperture_m, QE, sigK_target/K,
                  sig_phot, sig_eff, texp, tobs, Nrv, systnum)
-    return Nrv, texp, tobserving, sig_phot, sig_eff
+    return Nrv, texp, tobs, sig_phot, sig_eff
 
 
 def estimate_Nrv(startheta, planettheta, instrumenttheta,
