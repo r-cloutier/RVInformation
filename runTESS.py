@@ -147,11 +147,11 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
     if verbose:
         print '\n%35s = %.3f m/s'%('Photon-noise limited RV uncertainty',
                                    sigmaRV_phot)
-        print '%35s = %.3f m/s'%('Effective RV uncertainty', sigmaRV_eff)
-        print '%35s = %.3f'%('Target fractional K uncertainty', sigmaK_target/K)
+        print '%35s = %.3f m/s'%('Effective RV uncertainty', sig_eff)
+        print '%35s = %.3f'%('Target fractional K uncertainty', sigK_target/K)
         print '%35s = %i'%('Number of RVs', Nrv)
         print '%35s = %.3f minutes'%('Exposure time', texp)
-        print '%35s = %.3f hours'%('Total observing time', tobserving)
+        print '%35s = %.3f hours'%('Total observing time', tobs)
 
     # Save values
     save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
@@ -251,10 +251,10 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
 
     # Apply corrections from Artigau to bands with a known correction
     correctionsYJHK = np.array([.47, .63, 1.59, 1.72])
-    sigmaRVs[band_strs == 'Y'] = sigmaRVs[band_strs == 'Y'] / corrections[0]
-    sigmaRVs[band_strs == 'J'] = sigmaRVs[band_strs == 'J'] / corrections[1]
-    sigmaRVs[band_strs == 'H'] = sigmaRVs[band_strs == 'H'] / corrections[2]
-    sigmaRVs[band_strs == 'K'] = sigmaRVs[band_strs == 'K'] / corrections[3]
+    sigmaRVs[band_strs == 'Y'] = sigmaRVs[band_strs == 'Y'] / correctionsYJHK[0]
+    sigmaRVs[band_strs == 'J'] = sigmaRVs[band_strs == 'J'] / correctionsYJHK[1]
+    sigmaRVs[band_strs == 'H'] = sigmaRVs[band_strs == 'H'] / correctionsYJHK[2]
+    sigmaRVs[band_strs == 'K'] = sigmaRVs[band_strs == 'K'] / correctionsYJHK[3]
 
     # Compute sigmaRV over all bands
     sigmaRV_phot = 1. / np.sqrt(np.sum(1./sigmaRVs**2))
