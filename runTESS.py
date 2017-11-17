@@ -8,7 +8,7 @@ from compute_sigmaRV import *
 from sigmaRV_activity import *
 from sigmaRV_planets import *
 import pylab as plt
-import rvs, sys, os
+import glob, rvs, sys, os
 from uncertainties import unumpy as unp
 
 
@@ -127,9 +127,11 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
     # compute vsini
     if testingseed:
         np.random.seed(1)
-    Prot = draw_prot_empirical(Ms)
-    I = abs(np.arccos(np.random.uniform(-1,1)))
-    vsini = 2*np.pi * rvs.Rsun2m(Rs)*1e-3 * np.sin(I) / rvs.days2sec(Prot) 
+    fname = 'Results/star%.4d/TESSplanet%.4d_%s_%.4d.dat'%(planetindex,
+                                                           planetindex,
+                                                           ''.join(band_strs),
+                                                            systnum)
+    Prot, vsini = _draw_prot(Ms, Rs, fname)
 
     # Estimate Nrv for this TESS planet
     startheta = mags, float(Teff_round), float(logg_round), Z, vsini, Ms, \
@@ -406,7 +408,25 @@ def _get_absolute_stellar_magnitudes(Ms):
     MZ,MY,MJ,MH,MK = MZs[g],MYs[g],MJs[g],MHs[g],MKs[g]    
 
     return Mu, Mb, Mv, Mr, Mi, MY, MJ, MH, MK 
+
+
+def _draw_prot(Ms, Rs, fname):
+    '''
+    Draw a rotation period and compute vsini or use the existing parameters 
+    for this system.
+    '''
+    # If a simulation of this system exists, read in those parameters
+    fs = np.array(glob.glob('%s_*_%s'%(fname.split('_')[0], fname.split('_')[-1])))
+    if fs.size > 0:
+        Prot, vsini = np.loadtxt(fs[0], usecols=(11,12))
         
+    # Otherwise sample new rotation information 
+    else:
+        Prot = draw_prot_empirical(Ms)
+        I = abs(np.arccos(np.random.uniform(-1,1)))
+        vsini = 2*np.pi * rvs.Rsun2m(Rs)*1e-3 * np.sin(I) / rvs.days2sec(Prot) 
+    return Prot, vsini
+    
 
 def get_planet_mass(rp):
     '''
@@ -505,7 +525,7 @@ def get_sigmaK_target_v3(P, Ms, K, sigP=5e-5, fracsigMs=.1):
 def save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
                  Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, sigmaRV_planets,
                  R, aperture_m, QE, fracsigmaK_target, sigmaRV_phot, sigmaRV_eff,
-                 texp, tobserving, Nrv, systnum):
+                 texp, tobserving, Nrv, fname):
     '''
     Write the stellar, planet, observatory parameters, and results to a text 
     file.
