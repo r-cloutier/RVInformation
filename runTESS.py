@@ -163,7 +163,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
 
 
 def estimate_Nrv(startheta, planettheta, instrumenttheta,
-                 fname=fname, sigmaRV_activity=0., sigmaRV_planets=0.,
+                 fname='', sigmaRV_activity=0., sigmaRV_planets=0.,
                  sigmaRV_noisefloor=.5, texpmin=10,
                  texpmax=60, testplanet_sigmaKfrac=0):
     '''
