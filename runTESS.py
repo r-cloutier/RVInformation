@@ -140,7 +140,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
     instrumenttheta = band_strs, R, aperture_m, QE
     Nrv,texp,tobs,sigK_target,sig_phot,sig_act,sig_planets,sig_eff = \
                             estimate_Nrv(startheta, planettheta,
-                                         instrumenttheta,
+                                         instrumenttheta, fname=fname,
                                          sigmaRV_activity=sigmaRV_activity,
                                          sigmaRV_planets=sigmaRV_planets,
                                          sigmaRV_noisefloor=sigmaRV_noisefloor,
@@ -159,12 +159,11 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
     save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
                  Rs, Teff, dist, Prot, vsini, Z, sig_act,
                  sig_planets, R, aperture_m, QE, sigK_target/K,
-                 sig_phot, sig_eff, texp, tobs, Nrv, systnum)
-    return Nrv, texp, tobs, sig_phot, sig_eff
+                 sig_phot, sig_eff, texp, tobs, Nrv, fname)
 
 
 def estimate_Nrv(startheta, planettheta, instrumenttheta,
-                 sigmaRV_activity=0., sigmaRV_planets=0.,
+                 fname=fname, sigmaRV_activity=0., sigmaRV_planets=0.,
                  sigmaRV_noisefloor=.5, texpmin=10,
                  texpmax=60, testplanet_sigmaKfrac=0):
     '''
@@ -251,7 +250,7 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
         sigmaRVs[i] = compute_sigmaRV(wl, spec, mags[i], band_strs[i], texp,
                                       aperture_m, QE, R)
 
-    # Apply corrections from Artigau to bands with a known correction
+    # Apply corrections from Artigau+2017 to bands with a known correction
     correctionsYJHK = np.array([.47, .63, 1.59, 1.72])
     sigmaRVs[band_strs == 'Y'] = sigmaRVs[band_strs == 'Y'] / correctionsYJHK[0]
     sigmaRVs[band_strs == 'J'] = sigmaRVs[band_strs == 'J'] / correctionsYJHK[1]
@@ -264,14 +263,21 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
                    else float(sigmaRV_noisefloor)
 
     # estimate sigmaRV due to stellar activity
-    if sigmaRV_activity == 0 and testplanet_sigmaKfrac == 0:
-        sigmaRV_activity = get_sigmaRV_activity(Teff_round, Ms, Prot, B_V)
+    fs = np.array(glob.glob('%s_*_%s'%(fname.split('_')[0], fname.split('_')[-1])))
+    if fs.size > 0:
+        sigmaRV_activity = np.loadtxt(fs[0])[14]
+    else:
+        if sigmaRV_activity == 0 and testplanet_sigmaKfrac == 0:
+            sigmaRV_activity = get_sigmaRV_activity(Teff_round, Ms, Prot, B_V)
         
     # estimate sigmaRV due to unseen planets
-    if sigmaRV_planets == 0 and testplanet_sigmaKfrac == 0 and mult > 1:
-        sigmaRV_planets = get_sigmaRV_planets(P, rp, Teff_round, Ms, mult,
-                                              sigmaRV_phot)
-    
+    if fs.size > 0:
+        sigmaRV_planets = np.loadtxt(fs[0])[15]
+    else:
+        if sigmaRV_planets == 0 and testplanet_sigmaKfrac == 0 and mult > 1:
+            sigmaRV_planets = get_sigmaRV_planets(P, rp, Teff_round, Ms, mult,
+                                                  sigmaRV_phot)
+            
     # compute effective sigmaRV
     sigmaRV_eff = np.sqrt(sigmaRV_phot**2 + \
                           sigmaRV_activity**2 + \
@@ -538,10 +544,8 @@ def save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
         os.mkdir('Results/star%.4d'%planetindex)
     except OSError:
         pass
-    f = open('Results/star%.4d/TESSplanet%.4d_%s_%.4d.dat'%(planetindex,
-                                                            planetindex,
-                                                            ''.join(band_strs),
-                                                            systnum), 'w')
+
+    f = open(fname, 'w')
     g = ''
     for i in range(len(mags)):
         g += '# %s = %.3f\n'%(band_strs[i], mags[i])
