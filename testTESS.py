@@ -9,6 +9,7 @@ def _TEST_estimate_Nrv_TESS(mags=[15.25, 13.52],
     startheta = mags, float(Teff_round), float(logg_round), Z, vsini
     planettheta = rp, mp, K
     instrumenttheta = band_strs, R, aperture_m, QE
+    
     Nrv, texp, tobserving, sigmaRV_phot, sigmaRV_eff = \
                         estimate_Nrv(startheta, planettheta, instrumenttheta,
                                      sigmaRV_activity=sigmaRV_activity,
