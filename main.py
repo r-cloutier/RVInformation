@@ -11,7 +11,18 @@ for i in range(len(band_strs)):
 
         testingseed = True if nsyst_per_TESSstar == 1 else False
 
-        estimate_Nrv_TESS(planetindex, band_strs[i], R[i], aperture_m[i],
-                    	  QE=.1, Z=0, sigmaRV_activity=0, sigmaRV_planets=0,
-                          sigmaRV_noisefloor=noisefloor[i], testingseed=testingseed,
-                          testplanet_sigmaKfrac=0, systnum=j, verbose=False)
+        if do_i_run_this_job(planetindex, band_strs[i], j):
+
+            estimate_Nrv_TESS(planetindex, band_strs[i], R[i], aperture_m[i],
+                              QE=.1, Z=0, sigmaRV_activity=0, sigmaRV_planets=0,
+                              sigmaRV_noisefloor=noisefloor[i], testingseed=testingseed,
+                              testplanet_sigmaKfrac=0, systnum=j, verbose=False)
+
+
+
+def do_i_run_this_job(planetindex, band_strs, systnum):
+    fname = 'Results/star%.4d/TESSplanet%.4d_%s_%.4d'%(planetindex,
+                                                       planetindex,
+                                                       ''.join(band_strs),
+                                                       systnum)))
+    return not os.path.exists(fname)
