@@ -53,15 +53,15 @@ def plot_Nrv_F(self, errorbar=False, pltt=True, label=False):
 
     if errorbar:
         ax.errorbar(self.Fs_med[g], self.Nrvs_med_I[g], self.Nrvs_emed_I[g],
-                    fmt='r.', ms=12, capsize=0, elinewidth=.5)
+                    fmt='ro', ms=2, capsize=0, elinewidth=.5)
         ax.errorbar(self.Fs_med[g], self.Nrvs_med_O[g], self.Nrvs_emed_O[g],
-                    fmt='b.', ms=12, capsize=0, elinewidth=.5)
+                    fmt='bo', ms=2, capsize=0, elinewidth=.5)
     else:
-        ax.plot(self.Fs_med[g], self.Nrvs_med_I[g], 'ro', ms=10, alpha=.5)
-        ax.plot(self.Fs_med[g], self.Nrvs_med_O[g], 'bo', ms=10, alpha=.5)
+        ax.plot(self.Fs_med[g], self.Nrvs_med_I[g], 'ro', ms=8, alpha=.5)
+        ax.plot(self.Fs_med[g], self.Nrvs_med_O[g], 'bo', ms=8, alpha=.5)
         
-    ax.set_xscale('log')#, ax.set_yscale('log')
-    ax.set_xlim((1e4,1e-1)), ax.set_ylim((1,2e2))
+    ax.set_xscale('log'), ax.set_yscale('log')
+    ax.set_xlim((1e4,1e-1)), ax.set_ylim((1,1e3))
     ax.set_xlabel('Insolation ($S_{\oplus}$)'), ax.set_ylabel('$n_{RV}$')
     
     if pltt:
@@ -98,7 +98,7 @@ def plot_Nrv_mag(self, mag='V', errorbar=True, pltt=True, label=False):
         ax.plot(xarr[g], self.Nrvs_med_O[g], 'bo', ms=10, alpha=.5)
         
     #ax.set_xlim((1e4,1e-1))
-    ax.set_ylim((1,2e2))
+    ax.set_yscale('log'), ax.set_ylim((1,1e3))
     ax.set_xlabel('$%s$'%mag), ax.set_ylabel('$n_{RV}$')
     
     if pltt:
@@ -114,10 +114,17 @@ def plot_Nrvratio(self, pltt=True, label=False):
             unumpy.uarray(self.Nrvs_med_O, self.Nrvs_emed_O)
     
     ax.errorbar(self.Teffs_med, unumpy.nominal_values(ratio),
-                unumpy.std_devs(ratio),
-                fmt='k.', ms=12, capsize=0, elinewidth=.5)
+                unumpy.std_devs(ratio), fmt='k.', ms=12, 
+		alpha=.5, capsize=0, elinewidth=.5)
     xlim = ax.get_xlim()
     ax.fill_between(list(xlim), np.ones(2), color='k', alpha=.2)
+
+    # plot planetary systems
+    names = ['TRAPPIST-1','Prox Cen','Ross 128','GJ 273']
+    Teffs = [2559, 3050, 3192, 3150]
+    for i in range(len(Teffs)):
+	g = (self.Teffs_med >= Teffs[i]*.75) & (self.Teffs_med <= Teffs[i]*1.25)
+	ax.plot(Teffs[i], np.median(unumpy.nominal_values(ratio)[g]), 'go', ms=10)
 
     ax.set_yscale('log'), ax.set_ylim((1e-2,1e2)), ax.set_xlim(xlim)
     ax.set_xlabel('Teff (K)'), ax.set_ylabel('$n_{RV,I} / n_{RV,O}$')
