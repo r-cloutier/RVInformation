@@ -13,7 +13,7 @@ from scipy.misc import derivative
 
 
 global c, h, bands, SNRtarget, centralwlSNR
-c, h, SNRtarget, centralwlSNR = 299792458., 6.62607004e-34, 5e2, 1.25
+c, h, SNRtarget, centralwlSNR = 299792458., 6.62607004e-34, 3e2, 1.25
 bands = ['U','B','V','R','I','Y','J','H','K']
 
 
@@ -335,7 +335,7 @@ def _cgs2Nphot(wl_full_microns, spec_full_cgs, wl_band_microns, spec_band_cgs):
     return spec_Nphot_scaled
                     
 
-def _rescale_sigmaRV(sigmaRV, mag, band_str, texp_min, aperture_m, QE, R):
+def rescale_sigmaRV(sigmaRV, mag, band_str, texp_min, aperture_m, QE, R):
     '''
     Rescale sigmaRV from SNR=100 per resolution element to whatever SNR is 
     achieved in the input band over a given integration time.
@@ -364,11 +364,11 @@ def _rescale_sigmaRV(sigmaRV, mag, band_str, texp_min, aperture_m, QE, R):
         The rescaled SNR of the spectrum
 
     '''
-    snr = _get_snr(mag, band_str, texp_min, aperture_m, QE, R)
+    snr = get_snr(mag, band_str, texp_min, aperture_m, QE, R)
     return sigmaRV * SNRtarget / snr
     
 
-def _get_snr(mag, band_str, texp_min, aperture_m, QE, R):
+def get_snr(mag, band_str, texp_min, aperture_m, QE, R):
     '''
     Compute the SNR of the spectrum in a certain band (e.g. 'J').
 
@@ -501,10 +501,9 @@ def exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
     texps = np.arange(texpmin, texpmax+.1, .1)  # minutes
     SNRs = np.zeros(texps.size)
     for i in range(texps.size):
-        SNRs[i] = _get_snr(reference_mag, reference_band, texps[i],
-                           aperture_m, QE, R)
+        SNRs[i] = get_snr(reference_mag, reference_band, texps[i],
+                          aperture_m, QE, R)
 
-        
     if SNRs.min() > SNRtarget:
         return float(texpmin)
     elif SNRs.max() < SNRtarget:
@@ -568,7 +567,7 @@ def _remove_tellurics_from_W(wl_band, W, transmission_threshold=.02):
     return W[notellurics]
 
 
-def _compute_W(wl_band, spec_band):
+def compute_W(wl_band, spec_band):
     '''
     Compute the weighting function W from the input spectrum using Eq. 8 from 
     Bouchy+2001.
@@ -634,13 +633,13 @@ def compute_sigmaRV(wl_band, spec_band, mag, band_str, texp, aperture_m, QE, R):
         the magnitude, exposure time, and telescope aperture
  
     '''
-    W = _compute_W(wl_band, spec_band)
+    W = compute_W(wl_band, spec_band)
     # remove tellurics
     W_clean = _remove_tellurics_from_W(wl_band, W)
     g = np.arange(W_clean.size) #np.arange(4, W_clean.size-4, dtype=int)
     sigmaRV = c / np.sqrt(np.sum(W_clean[g]))
-    sigmaRV_scaled = _rescale_sigmaRV(sigmaRV, mag, band_str, texp,
-                                      aperture_m, QE, R)
+    sigmaRV_scaled = rescale_sigmaRV(sigmaRV, mag, band_str, texp,
+                                     aperture_m, QE, R)
     return sigmaRV_scaled
 
 
