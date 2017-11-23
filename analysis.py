@@ -109,8 +109,59 @@ def TESS_mp_5sigma():
     np.savetxt('Results/median_results_5sigma_mp.dat', output, header=hdr, 
 	       delimiter=',', fmt='%.4f')
 
+    
+def TESS_rho_Xsigma(X, sigP=5e-5, fracsigMs=.1):
+    '''
+    Compute Nrv to detect the planet's density at the desired significance X 
+    (e.g. X=3 for 3sigma).
+    '''
+    starnums, Nharps, Nnirps, Nspirou, texpharps, texpnirps, texpspirou, tobsharps, tobsnirps, tobsspirou, min_Nrv, bestspectrograph_Nrv, min_tobs, bestspectrograph_tobs = np.loadtxt('Results/median_results_3sigma_mp.dat', delimiter=',').T
 
-def compute_sigrp(frac_sigRs=.1):
+    # get sigma_mp to measure a 5sigma density
+    rp, sigrp = _compute_sigrp()
+    g = starnums.astype(int)
+    rp, sigrp = rp[g], sigrp[g]
+    mp = np.array([runTESS.get_planet_mass(i) for i in rp])
+    fracsigrho = 1./X
+    sigmp = mp * np.sqrt(fracsigrho**2 - (3*sigrp/rp)**2)
+    if not np.any(np.isfinite(sigmp)):
+        raise ValueError('Cannot measure the bulk density this precisely ' + \
+                         'for any TESS planet.')
+    
+    # get sigma_K to measure this planet density
+    inds = np.array([3,5])
+    P, K = np.ascontiguousarray(get_TESS_data())[inds]
+    P, K = P[g], K[g]
+    Ms = runTESS.get_stellar_mass(P, mp, K)
+    fracsigK = np.sqrt((sigmp/mp)**2 - (sigP/(3*P))**2 - (2*fracsigMs/3)**2)
+
+    # increase Nrv to measure the density at 3sigma
+    frac_increase_Nrv = (.327 / fracsigK)**2
+
+    Nharps *= frac_increase_Nrv
+    Nnirps *= frac_increase_Nrv
+    Nspirou *= frac_increase_Nrv
+
+    tobsharps = Nharps * texpharps / 60
+    tobsnirps = Nnirps * texpnirps / 60
+    tobsspirou = Nspirou * texpspirou / 60
+
+    # save results to file
+    hdr = 'TESS planet index\nNrv_HARPS\nNrv_NIRPS\nNrv_SPIROU\ntexp_HARPS ' + \
+          '[min]\ntexp_NIRPS [min]\ntexp_SPIROU [min]\ntobs_HARPS [hrs]\n' + \
+          'tobs_NIRPS [hrs]\ntobs_SPIROU [hrs]\nmin Nrv\nmin spectrograph ' + \
+          '(0=HARPS, 1=NIRPS, 2=SPIROU)\nmin tobs [hrs]\nmin spectrograph ' + \
+          '(0=HARPS, 1=NIRPS, 2=SPIROU)'
+    output = np.array([starnums, Nharps, Nnirps, Nspirou, texpharps, texpnirps,
+                       texpspirou, tobsharps, tobsnirps, tobsspirou, min_Nrv,
+                       bestspectrograph_Nrv, min_tobs, bestspectrograph_tobs]).T
+    np.savetxt(('Results/median_results_%.1fsigma_rho.dat'%X).replace('.','d'),
+               output, header=hdr, delimiter=',', fmt='%.4f')
+
+    
+
+    
+def _compute_sigrp(frac_sigRs=.1):
     '''
     Use the TESS parameters to estimate the measurement uncertainty on the 
     planet's radius. See http://adsabs.harvard.edu/abs/2008ApJ...689..499C 
