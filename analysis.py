@@ -68,5 +68,5 @@ def TESS_mp_3sigma(self):
     output = np.array([starnums, Nharps, Nnirps, Nspirou, texpharps, texpnirps,
                        texpspirou, tobsharps, tobsnirps, tobsspirou, min_Nrv,
                        bestspectrograph_Nrv, min_tobs, bestspectrograph_tobs]).T
-    np.savetxt('Results/median_results.dat', output, header=hdr, delimiter=',',
-               fmt='%.4f')
+    np.savetxt('Results/median_results_3sigma_mp.dat', output, header=hdr, 
+	       delimiter=',', fmt='%.4f')
