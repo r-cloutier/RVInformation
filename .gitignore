@@ -3,5 +3,6 @@
 *pyc
 *notes*
 /paper
+/plots
 /Results
 testsigmaRVphot.py

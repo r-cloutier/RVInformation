@@ -77,7 +77,7 @@ def _get_band_spectra(band_strs, Teff_round, logg_round, Z=0., vsini=.1, R=7e4):
         hdu.writeto('input_data/band_spectrum_%s'%band_strs[i], overwrite=True)
     
     
-def compute_texps(mags, band_strs, aperture_m, QE, R):
+def compute_texps(mags, band_strs, aperture_m, QE, R, Teff_round):
 
     wlTAPAS, transTAPAS = np.loadtxt('input_data/tapas_000001.ipac', \
                                      skiprows=23).T

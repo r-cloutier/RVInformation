@@ -8,7 +8,8 @@ def compute_Nrv(sigeff, sigK):
 
 def plot_Nrv_estimates(pltt=True, label=False):
     # Get real planet data
-    _,sigeffs, sigKs, Nrv_true, multflag = np.genfromtxt('Nrv_tests/FASTtests.dat').T
+    _,sigeffs, sigKs, Nrv_true, multflag = \
+                                np.genfromtxt('Nrv_tests/FASTtests.dat').T
 
     # Compute Nrv
     Nrv_calc = compute_Nrv(sigeffs, sigKs)
@@ -17,10 +18,10 @@ def plot_Nrv_estimates(pltt=True, label=False):
     fig = plt.figure(figsize=(6,6))
     ax = fig.add_subplot(111, aspect='equal')
     g = np.isfinite(multflag)#multflag == 1
-    cax = ax.scatter(Nrv_true[g], Nrv_calc[g], edgecolors='none', c=np.log10(sigeffs[g]),
-                     marker='o', s=100)
+    cax = ax.scatter(Nrv_true[g], Nrv_calc[g], edgecolors='none',
+                     c=np.log10(sigeffs[g]), marker='o', s=100)
     cbar_axes = fig.add_axes([.1,.9,.87,.04])
-    cbar = fig.colorbar(cax, cax=cbar_axes, orientation='horizontal')#, pad=.11)
+    cbar = fig.colorbar(cax, cax=cbar_axes, orientation='horizontal')
     cbar.set_label('log sigK')
     
     Nrvs = np.append(Nrv_true, Nrv_calc)
@@ -123,12 +124,40 @@ def plot_Nrvratio(self, pltt=True, label=False):
     names = ['TRAPPIST-1','Prox Cen','Ross 128','GJ 273']
     Teffs = [2559, 3050, 3192, 3150]
     for i in range(len(Teffs)):
-	g = (self.Teffs_med >= Teffs[i]*.75) & (self.Teffs_med <= Teffs[i]*1.25)
-	ax.plot(Teffs[i], np.median(unumpy.nominal_values(ratio)[g]), 'go', ms=10)
+	g = (self.Teffs_med >= Teffs[i]*.75) & \
+            (self.Teffs_med <= Teffs[i]*1.25)
+	ax.plot(Teffs[i], np.median(unumpy.nominal_values(ratio)[g]), 'go',
+                ms=10)
 
     ax.set_yscale('log'), ax.set_ylim((1e-2,1e2)), ax.set_xlim(xlim)
     ax.set_xlabel('Teff (K)'), ax.set_ylabel('$n_{RV,I} / n_{RV,O}$')
     ax.minorticks_on()
+    
+    if pltt:
+        plt.show()
+    plt.close('all')
+
+
+def plot_NIRPSvSPIROU(self, pltt=True, label=False):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    starnums, systnums = np.unique(self.starnums), np.unique(self.systnums)
+    N_nirps, N_spirou = np.zeros(0), np.zeros(0)
+    Teffs = np.zeros(0)
+    for i in range(starnums.size):
+        for j in range(systnums.size):
+            g = (self.starnums == starnums[i]) & (self.systnums == systnums[j])
+            if 'N' in self.spectrographs[g] and 'S' in self.spectrographs[g]:
+                N_nirps = np.append(N_nirps,
+                                    self.Nrvs[g & (self.spectrographs == 'N')])
+                N_spirou = np.append(N_spirou,
+                                     self.Nrvs[g & (self.spectrographs == 'S')])
+                Teffs = np.append(Teffs, self.Teffs[g][0])
+
+    ax.scatter(Teffs, N_nirps/N_spirou)
+    ax.set_yscale('log'), ax.set_ylim((1e-3, 1e3))
+    ax.set_xlabel('Teff [K]'), ax.set_ylabel('N_nirps / N_spirou')
     
     if pltt:
         plt.show()
