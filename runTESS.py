@@ -243,7 +243,7 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
                                              texpmin=texpmin, texpmax=texpmax)
 
     # compute sigmaRV in each band for a fixed texp
-    sigmaRVs = np.zeros(len(mags))
+    sigmaRVs = np.zeros(mags.size)
     for i in range(sigmaRVs.size):
         wl, spec = get_reduced_spectrum(Teff_round, logg_round, Z, vsini,
                                         band_strs[i], R, pltt=False)
@@ -263,7 +263,8 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
                    else float(sigmaRV_noisefloor)
 
     # estimate sigmaRV due to stellar activity
-    fs = np.array(glob.glob('%s_*_%s'%(fname.split('_')[0], fname.split('_')[-1])))
+    fs = np.array(glob.glob('%s_*_%s'%(fname.split('_')[0],
+                                       fname.split('_')[-1])))
     if fs.size > 0:
         sigmaRV_activity = np.loadtxt(fs[0])[14]
     else:
