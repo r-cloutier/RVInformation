@@ -68,8 +68,8 @@ def draw_FGK_planets(P, rp, nplanets, Ms):
 def draw_M_planets(P, rp, nplanets, Ms):
     '''
     Draw planets from around M stars from the occurrence rates derived in 
-    Dressing & Charbonneau 2015. Ensure that each pair in the multi-planet system 
-    is Lagrange stable given circular orbits.
+    Dressing & Charbonneau 2015. Ensure that each pair in the multi-planet 
+    system is Lagrange stable given circular orbits.
     '''
     assert nplanets > 1
     rpgrid = np.linspace(.5, 4, 8)
@@ -82,7 +82,7 @@ def draw_M_planets(P, rp, nplanets, Ms):
                            (0, 0.65, 3.25, 3.37, 1.97),
                            (0, 0.38, 1.05, 0.56, 0))).T
     occurrence *= 1e-2
-    
+
     # sample planets until we get the correct multiplicity
     Ps, mp = np.array([P]), mr.radF2mass(rp)
     while Ps.size < nplanets:
@@ -91,14 +91,15 @@ def draw_M_planets(P, rp, nplanets, Ms):
         mps = mr.radF2mass(rps, Fs=np.repeat(336.5, rps.size))
         for i in range(Pgrid.size-1):
             for j in range(rpgrid.size-1):
-                
-                if np.random.rand() <= occurrence[i,j] and Pgrid[i] > P:
+
+                if np.random.rand() <= occurrence[i,j]:
 
                     # draw a system
                     Ps  = np.append(Ps, np.random.uniform(Pgrid[i], Pgrid[i+1]))
-                    rps = np.append(rps, np.random.uniform(rpgrid[j], rpgrid[j+1]))
+                    rps = np.append(rps, np.random.uniform(rpgrid[j],
+                                                           rpgrid[j+1]))
                     mps = mr.radF2mass(rps, Fs=np.repeat(336.5, rps.size))
-
+                    
         sort = np.argsort(Ps)
         Ps, rps, mps = Ps[sort], rps[sort], mps[sort]
 
@@ -137,10 +138,10 @@ def _compute_sigmaRV_planets(Ks):
 # rvs.is_Lagrangestable(Ps, Ms, mps, eccs)
 def get_sigmaRV_planets(P, rp, Teff, Ms, mult, sigmaRV_phot):
     '''
-    Compute the RV rms due to additional planets with P > TESS planet P. Additional 
-    planets are drawn from the known planet occurrences rates. Sampled planets with 
-    K > sigmaRV_phot, are assumed to be detected in RV, and modelled such that they 
-    do not contribute to the effective RV rms.
+    Compute the RV rms due to additional planets with P > TESS planet P. 
+    Additional planets are drawn from the known planet occurrences rates. 
+    Sampled planets with K > sigmaRV_phot, are assumed to be detected in RV, 
+    and modelled such that they do not contribute to the effective RV rms.
     '''
     # FGK star
     if Teff > 3800:

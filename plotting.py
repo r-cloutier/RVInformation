@@ -1,4 +1,6 @@
-from imports import *
+import numpy as np
+import pylab as plt
+from uncertainties import unumpy as unp
 
 
 def compute_Nrv(sigeff, sigK):
@@ -70,7 +72,7 @@ def plot_Nrv_F(self, errorbar=False, pltt=True, label=False):
     plt.close('all')
 
 
-def plot_Nrv_mag(self, mag='V', errorbar=True, pltt=True, label=False):
+def plot_Nrv_mag(self, mag='V', errorbar=False, pltt=True, label=False):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
@@ -95,8 +97,8 @@ def plot_Nrv_mag(self, mag='V', errorbar=True, pltt=True, label=False):
         ax.errorbar(xarr[g], self.Nrvs_med_O[g], self.Nrvs_emed_O[g],
                     fmt='b.', ms=12, capsize=0, elinewidth=.5)
     else:
-        ax.plot(xarr[g], self.Nrvs_med_I[g], 'ro', ms=10, alpha=.5)
-        ax.plot(xarr[g], self.Nrvs_med_O[g], 'bo', ms=10, alpha=.5)
+        ax.plot(xarr[g], self.Nrvs_med_I[g], 'ro', ms=8, alpha=.5)
+        ax.plot(xarr[g], self.Nrvs_med_O[g], 'bo', ms=8, alpha=.5)
         
     #ax.set_xlim((1e4,1e-1))
     ax.set_yscale('log'), ax.set_ylim((1,1e3))
@@ -111,11 +113,11 @@ def plot_Nrvratio(self, pltt=True, label=False):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    ratio = unumpy.uarray(self.Nrvs_med_I, self.Nrvs_emed_I) / \
-            unumpy.uarray(self.Nrvs_med_O, self.Nrvs_emed_O)
+    ratio = unp.uarray(self.Nrvs_med_I, self.Nrvs_emed_I) / \
+            unp.uarray(self.Nrvs_med_O, self.Nrvs_emed_O)
     
-    ax.errorbar(self.Teffs_med, unumpy.nominal_values(ratio),
-                unumpy.std_devs(ratio), fmt='k.', ms=12, 
+    ax.errorbar(self.Teffs_med, unp.nominal_values(ratio),
+                unp.std_devs(ratio), fmt='k.', ms=12, 
 		alpha=.5, capsize=0, elinewidth=.5)
     xlim = ax.get_xlim()
     ax.fill_between(list(xlim), np.ones(2), color='k', alpha=.2)
@@ -126,7 +128,7 @@ def plot_Nrvratio(self, pltt=True, label=False):
     for i in range(len(Teffs)):
 	g = (self.Teffs_med >= Teffs[i]*.75) & \
             (self.Teffs_med <= Teffs[i]*1.25)
-	ax.plot(Teffs[i], np.median(unumpy.nominal_values(ratio)[g]), 'go',
+	ax.plot(Teffs[i], np.median(unp.nominal_values(ratio)[g]), 'go',
                 ms=10)
 
     ax.set_yscale('log'), ax.set_ylim((1e-2,1e2)), ax.set_xlim(xlim)
