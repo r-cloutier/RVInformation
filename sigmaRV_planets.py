@@ -28,7 +28,7 @@ def draw_FGK_planets(P, rp, nplanets, Ms):
         for i in range(Pgrid.size-1):
             for j in range(rpgrid.size-1):
 
-                if np.random.rand() <= occurrence[i,j] and Pgrid[i] > P:
+                if np.random.rand() <= occurrence[i,j]:
 
                     # draw a system
                     Ps  = np.append(Ps, np.random.uniform(Pgrid[i], Pgrid[i+1]))
