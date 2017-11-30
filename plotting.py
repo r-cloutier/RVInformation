@@ -59,7 +59,7 @@ def plot_Nrv_F(self, errorbar=False, pltt=True, label=False):
                     fmt='ro', ms=2, capsize=0, elinewidth=.5)
         ax.errorbar(self.Fs_med[g], self.Nrvs_med_O[g], self.Nrvs_emed_O[g],
                     fmt='bo', ms=2, capsize=0, elinewidth=.5)
-    else:
+    else:  # point estimates
         ax.plot(self.Fs_med[g], self.Nrvs_med_I[g], 'ro', ms=8, alpha=.5)
         ax.plot(self.Fs_med[g], self.Nrvs_med_O[g], 'bo', ms=8, alpha=.5)
         
@@ -96,7 +96,7 @@ def plot_Nrv_mag(self, mag='V', errorbar=False, pltt=True, label=False):
                     fmt='r.', ms=12, capsize=0, elinewidth=.5)
         ax.errorbar(xarr[g], self.Nrvs_med_O[g], self.Nrvs_emed_O[g],
                     fmt='b.', ms=12, capsize=0, elinewidth=.5)
-    else:
+    else:  # point estimates
         ax.plot(xarr[g], self.Nrvs_med_I[g], 'ro', ms=8, alpha=.5)
         ax.plot(xarr[g], self.Nrvs_med_O[g], 'bo', ms=8, alpha=.5)
         
