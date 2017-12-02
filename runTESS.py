@@ -484,27 +484,27 @@ def get_stellar_mass(P, mp, K):
                                (rvs.Mearth2kg(mp) / K)**3))
 
 
-def get_sigmaK_target_v1(rp, K, P, Ms, sigP=5e-5,
-                         fracsigrp=.05, fracsigMs=.1, fracsigrho_target=.3):
-    '''
-    Compute the K detection significance required to measure a planet's density 
-    at a specific fractional precision.
-    '''
-    urp, uP, uMs = unp.uarray(rp, rp*fracsigrp), unp.uarray(P, sigP), \
-                   unp.uarray(Ms, Ms*fracsigMs)
-
-    fracsigKs = np.logspace(-2,0,100)
-    fracsigrho = np.zeros(fracsigKs.size)
-    
-    for i in range(fracsigKs.size):
-        uK = unp.uarray(K, K*fracsigKs[i])
-        ump = rvs.RV_mp(uP, uMs, uK)
-        urho = rhoEarth * ump / urp**3
-        fracsigrho[i] =  unp.std_devs(urho) / unp.nominal_values(urho)
-
-    # find corresponding fractional sigmaK
-    fint = interp1d(fracsigrho, fracsigKs)
-    return float(fint(fracsigrho_target) * K)
+#def get_sigmaK_target_v1(rp, K, P, Ms, sigP=5e-5,
+#                         fracsigrp=.05, fracsigMs=.1, fracsigrho_target=.3):
+#    '''
+#    Compute the K detection significance required to measure a planet's density 
+#    at a specific fractional precision.
+#    '''
+#    urp, uP, uMs = unp.uarray(rp, rp*fracsigrp), unp.uarray(P, sigP), \
+#                   unp.uarray(Ms, Ms*fracsigMs)
+#
+#    fracsigKs = np.logspace(-2,0,100)
+#    fracsigrho = np.zeros(fracsigKs.size)
+#    
+#    for i in range(fracsigKs.size):
+#        uK = unp.uarray(K, K*fracsigKs[i])
+#        ump = rvs.RV_mp(uP, uMs, uK)
+#        urho = rhoEarth * ump / urp**3
+#        fracsigrho[i] =  unp.std_devs(urho) / unp.nominal_values(urho)
+#
+#    # find corresponding fractional sigmaK
+#    fint = interp1d(fracsigrho, fracsigKs)
+#    return float(fint(fracsigrho_target) * K)
 
 
 def get_sigmaK_target_v2(K, fracsigmaK):

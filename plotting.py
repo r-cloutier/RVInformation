@@ -56,9 +56,9 @@ def plot_Nrv_F(self, errorbar=False, pltt=True, label=False):
 
     if errorbar:
         ax.errorbar(self.Fs_med[g], self.Nrvs_med_I[g], self.Nrvs_emed_I[g],
-                    fmt='ro', ms=2, capsize=0, elinewidth=.5)
+                    fmt='ro', ms=3, capsize=0, elinewidth=.4, alpha=.6)
         ax.errorbar(self.Fs_med[g], self.Nrvs_med_O[g], self.Nrvs_emed_O[g],
-                    fmt='bo', ms=2, capsize=0, elinewidth=.5)
+                    fmt='bo', ms=3, capsize=0, elinewidth=.4, alpha=.6)
     else:  # point estimates
         ax.plot(self.Fs_med[g], self.Nrvs_med_I[g], 'ro', ms=8, alpha=.5)
         ax.plot(self.Fs_med[g], self.Nrvs_med_O[g], 'bo', ms=8, alpha=.5)
@@ -93,9 +93,9 @@ def plot_Nrv_mag(self, mag='V', errorbar=False, pltt=True, label=False):
 
     if errorbar:
         ax.errorbar(xarr[g], self.Nrvs_med_I[g], self.Nrvs_emed_I[g],
-                    fmt='r.', ms=12, capsize=0, elinewidth=.5)
+                    fmt='ro', ms=3, capsize=0, elinewidth=.4, alpha=.5)
         ax.errorbar(xarr[g], self.Nrvs_med_O[g], self.Nrvs_emed_O[g],
-                    fmt='b.', ms=12, capsize=0, elinewidth=.5)
+                    fmt='bo', ms=3, capsize=0, elinewidth=.4, alpha=.5)
     else:  # point estimates
         ax.plot(xarr[g], self.Nrvs_med_I[g], 'ro', ms=8, alpha=.5)
         ax.plot(xarr[g], self.Nrvs_med_O[g], 'bo', ms=8, alpha=.5)
@@ -157,10 +157,17 @@ def plot_NIRPSvSPIROU(self, pltt=True, label=False):
                                      self.Nrvs[g & (self.spectrographs == 'S')])
                 Teffs = np.append(Teffs, self.Teffs[g][0])
 
-    ax.scatter(Teffs, N_nirps/N_spirou)
-    ax.set_yscale('log'), ax.set_ylim((1e-3, 1e3))
+    ax.scatter(Teffs, N_nirps/N_spirou, s=20)
+    ax.axhline(0, ls='--')
+    ax.fill_between(ax.get_xlim(), 1, 10, color='k', alpha=.4)
+    ax.text(.15, .9, 'SPIRou favoured', transform=ax.transAxes)
+    ax.text(.15, .2, 'NIRPS favoured', transform=ax.transAxes)
+    ax.set_yscale('log'), ax.set_ylim((1./3, 3))
     ax.set_xlabel('Teff [K]'), ax.set_ylabel('N_nirps / N_spirou')
-    
+  
+    fig.subplots_adjust(left=.15) 
+    if label:
+ 	plt.savefig('plots/NIRPSvSPIROU.png')
     if pltt:
         plt.show()
     plt.close('all')
