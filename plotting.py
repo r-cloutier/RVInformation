@@ -58,7 +58,11 @@ def plot_Nrv_F(self, errorbar=False, pltt=True, label=False):
         ax.errorbar(self.Fs_med[g], self.Nrvs_med_I[g], self.Nrvs_emed_I[g],
                     fmt='ro', ms=3, capsize=0, elinewidth=.4, alpha=.6)
         ax.errorbar(self.Fs_med[g], self.Nrvs_med_O[g], self.Nrvs_emed_O[g],
+<<<<<<< HEAD
                     fmt='bo', ms=3, capsize=0, elinewidth=.4, alpha=.6)
+=======
+                    fmt='bo', ms=2, capsize=0, elinewidth=.5)
+>>>>>>> 2127293c623481c49976119d4a263226856eb9e1
     else:  # point estimates
         ax.plot(self.Fs_med[g], self.Nrvs_med_I[g], 'ro', ms=8, alpha=.5)
         ax.plot(self.Fs_med[g], self.Nrvs_med_O[g], 'bo', ms=8, alpha=.5)
@@ -95,7 +99,11 @@ def plot_Nrv_mag(self, mag='V', errorbar=False, pltt=True, label=False):
         ax.errorbar(xarr[g], self.Nrvs_med_I[g], self.Nrvs_emed_I[g],
                     fmt='ro', ms=3, capsize=0, elinewidth=.4, alpha=.5)
         ax.errorbar(xarr[g], self.Nrvs_med_O[g], self.Nrvs_emed_O[g],
+<<<<<<< HEAD
                     fmt='bo', ms=3, capsize=0, elinewidth=.4, alpha=.5)
+=======
+                    fmt='b.', ms=12, capsize=0, elinewidth=.5)
+>>>>>>> 2127293c623481c49976119d4a263226856eb9e1
     else:  # point estimates
         ax.plot(xarr[g], self.Nrvs_med_I[g], 'ro', ms=8, alpha=.5)
         ax.plot(xarr[g], self.Nrvs_med_O[g], 'bo', ms=8, alpha=.5)
