@@ -38,7 +38,6 @@ def plot_Nrv_estimates(pltt=True, label=False):
     ax.set_xscale('log'), ax.set_yscale('log')
     ax.set_xlabel('Actual n$_{RV}$'), ax.set_ylabel('Calculated n$_{RV}$')
     ax.set_xlim((1, 3e2)), ax.set_ylim((1, 3e2))
-<<<<<<< HEAD
     ax.minorticks_on()
 
     plt.subplots_adjust(bottom=.12)
@@ -59,11 +58,7 @@ def plot_Nrv_F(self, errorbar=False, pltt=True, label=False):
         ax.errorbar(self.Fs_med[g], self.Nrvs_med_I[g], self.Nrvs_emed_I[g],
                     fmt='ro', ms=3, capsize=0, elinewidth=.4, alpha=.6)
         ax.errorbar(self.Fs_med[g], self.Nrvs_med_O[g], self.Nrvs_emed_O[g],
-<<<<<<< HEAD
                     fmt='bo', ms=3, capsize=0, elinewidth=.4, alpha=.6)
-=======
-                    fmt='bo', ms=2, capsize=0, elinewidth=.5)
->>>>>>> 2127293c623481c49976119d4a263226856eb9e1
     else:  # point estimates
         ax.plot(self.Fs_med[g], self.Nrvs_med_I[g], 'ro', ms=8, alpha=.5)
         ax.plot(self.Fs_med[g], self.Nrvs_med_O[g], 'bo', ms=8, alpha=.5)
@@ -100,11 +95,7 @@ def plot_Nrv_mag(self, mag='V', errorbar=False, pltt=True, label=False):
         ax.errorbar(xarr[g], self.Nrvs_med_I[g], self.Nrvs_emed_I[g],
                     fmt='ro', ms=3, capsize=0, elinewidth=.4, alpha=.5)
         ax.errorbar(xarr[g], self.Nrvs_med_O[g], self.Nrvs_emed_O[g],
-<<<<<<< HEAD
                     fmt='bo', ms=3, capsize=0, elinewidth=.4, alpha=.5)
-=======
-                    fmt='b.', ms=12, capsize=0, elinewidth=.5)
->>>>>>> 2127293c623481c49976119d4a263226856eb9e1
     else:  # point estimates
         ax.plot(xarr[g], self.Nrvs_med_I[g], 'ro', ms=8, alpha=.5)
         ax.plot(xarr[g], self.Nrvs_med_O[g], 'bo', ms=8, alpha=.5)
@@ -142,8 +133,6 @@ def plot_Nrvratio(self, pltt=True, label=False):
 
     ax.set_yscale('log'), ax.set_ylim((1e-2,1e2)), ax.set_xlim(xlim)
     ax.set_xlabel('Teff (K)'), ax.set_ylabel('$n_{RV,I} / n_{RV,O}$')
-=======
->>>>>>> 2127293c623481c49976119d4a263226856eb9e1
     ax.minorticks_on()
 
     plt.subplots_adjust(bottom=.12)
@@ -154,97 +143,6 @@ def plot_Nrvratio(self, pltt=True, label=False):
     plt.close('all')
 
     
-def plot_Nrv_F(self, errorbar=False, pltt=True, label=False):
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-
-    g = self.Teffs_med > 0
-
-    if errorbar:
-        ax.errorbar(self.Fs_med[g], self.Nrvs_med_I[g], self.Nrvs_emed_I[g],
-                    fmt='ro', ms=2, capsize=0, elinewidth=.5)
-        ax.errorbar(self.Fs_med[g], self.Nrvs_med_O[g], self.Nrvs_emed_O[g],
-                    fmt='bo', ms=2, capsize=0, elinewidth=.5)
-    else:  # point estimates
-        ax.plot(self.Fs_med[g], self.Nrvs_med_I[g], 'ro', ms=8, alpha=.5)
-        ax.plot(self.Fs_med[g], self.Nrvs_med_O[g], 'bo', ms=8, alpha=.5)
-        
-    ax.set_xscale('log'), ax.set_yscale('log')
-    ax.set_xlim((1e4,1e-1)), ax.set_ylim((1,1e3))
-    ax.set_xlabel('Insolation ($S_{\oplus}$)'), ax.set_ylabel('$n_{RV}$')
-    
-    if pltt:
-        plt.show()
-    plt.close('all')
-
-
-def plot_Nrv_mag(self, mag='V', errorbar=False, pltt=True, label=False):
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-
-    if mag == 'B':
-        xarr = self.Bmags_med
-    elif mag == 'V':
-        xarr = self.Vmags_med
-    elif mag == 'Y':
-        xarr = self.Ymags_med
-    elif mag == 'J':
-        xarr = self.Jmags_med
-    elif mag == 'H':
-        xarr = self.Hmags_med
-    elif mag == 'K':
-        xarr = self.Kmags_med
-        
-    g = self.Teffs_med > 0
-
-    if errorbar:
-        ax.errorbar(xarr[g], self.Nrvs_med_I[g], self.Nrvs_emed_I[g],
-                    fmt='r.', ms=12, capsize=0, elinewidth=.5)
-        ax.errorbar(xarr[g], self.Nrvs_med_O[g], self.Nrvs_emed_O[g],
-                    fmt='b.', ms=12, capsize=0, elinewidth=.5)
-    else:  # point estimates
-        ax.plot(xarr[g], self.Nrvs_med_I[g], 'ro', ms=8, alpha=.5)
-        ax.plot(xarr[g], self.Nrvs_med_O[g], 'bo', ms=8, alpha=.5)
-        
-    #ax.set_xlim((1e4,1e-1))
-    ax.set_yscale('log'), ax.set_ylim((1,1e3))
-    ax.set_xlabel('$%s$'%mag), ax.set_ylabel('$n_{RV}$')
-    
-    if pltt:
-        plt.show()
-    plt.close('all')
-    
-
-def plot_Nrvratio(self, pltt=True, label=False):
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-
-    ratio = unp.uarray(self.Nrvs_med_I, self.Nrvs_emed_I) / \
-            unp.uarray(self.Nrvs_med_O, self.Nrvs_emed_O)
-    
-    ax.errorbar(self.Teffs_med, unp.nominal_values(ratio),
-                unp.std_devs(ratio), fmt='k.', ms=12, 
-		alpha=.5, capsize=0, elinewidth=.5)
-    xlim = ax.get_xlim()
-    ax.fill_between(list(xlim), np.ones(2), color='k', alpha=.2)
-
-    # plot planetary systems
-    names = ['TRAPPIST-1','Prox Cen','Ross 128','GJ 273']
-    Teffs = [2559, 3050, 3192, 3150]
-    for i in range(len(Teffs)):
-	g = (self.Teffs_med >= Teffs[i]*.75) & \
-            (self.Teffs_med <= Teffs[i]*1.25)
-	ax.plot(Teffs[i], np.median(unp.nominal_values(ratio)[g]), 'go',
-                ms=10)
-
-    ax.set_yscale('log'), ax.set_ylim((1e-2,1e2)), ax.set_xlim(xlim)
-    ax.set_xlabel('Teff (K)'), ax.set_ylabel('$n_{RV,I} / n_{RV,O}$')
-    ax.minorticks_on()
-    
-    if pltt:
-        plt.show()
-    plt.close('all')
-
 
 def plot_NIRPSvSPIROU(self, pltt=True, label=False):
     fig = plt.figure()
@@ -271,35 +169,3 @@ def plot_NIRPSvSPIROU(self, pltt=True, label=False):
         plt.show()
     plt.close('all')
 
-
-def plot_NIRPSvSPIROU(self, pltt=True, label=False):
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-
-    starnums, systnums = np.unique(self.starnums), np.unique(self.systnums)
-    N_nirps, N_spirou = np.zeros(0), np.zeros(0)
-    Teffs = np.zeros(0)
-    for i in range(starnums.size):
-        for j in range(systnums.size):
-            g = (self.starnums == starnums[i]) & (self.systnums == systnums[j])
-            if 'N' in self.spectrographs[g] and 'S' in self.spectrographs[g]:
-                N_nirps = np.append(N_nirps,
-                                    self.Nrvs[g & (self.spectrographs == 'N')])
-                N_spirou = np.append(N_spirou,
-                                     self.Nrvs[g & (self.spectrographs == 'S')])
-                Teffs = np.append(Teffs, self.Teffs[g][0])
-
-    ax.scatter(Teffs, N_nirps/N_spirou, s=20)
-    ax.axhline(0, ls='--')
-    ax.fill_between(ax.get_xlim(), 1, 10, color='k', alpha=.4)
-    ax.text(.15, .9, 'SPIRou favoured', transform=ax.transAxes)
-    ax.text(.15, .2, 'NIRPS favoured', transform=ax.transAxes)
-    ax.set_yscale('log'), ax.set_ylim((1./3, 3))
-    ax.set_xlabel('Teff [K]'), ax.set_ylabel('N_nirps / N_spirou')
-  
-    fig.subplots_adjust(left=.15) 
-    if label:
- 	plt.savefig('plots/NIRPSvSPIROU.png')
-    if pltt:
-        plt.show()
-    plt.close('all')

@@ -63,25 +63,12 @@ def TESS_mp_3sigma(self):
     bestspectrograph_tobs = np.argmin(tobss, axis=1)
 
     # save results to file
-<<<<<<< HEAD
     hdr = '0 TESS planet index\n1 median Nrv_HARPS\n2 medianNrv_NIRPS\n3 median Nrv_SPIROU\n4 texp_HARPS [min]\n5 texp_NIRPS [min]\n6 texp_SPIROU [min]\n7 median tobs_HARPS [hrs]\n8 median tobs_NIRPS [hrs]\n9 median tobs_SPIROU [hrs]\n10 min median Nrv\n11 min spectrograph (0=HARPS, 1=NIRPS, 2=SPIROU)\n12 min median tobs [hrs]\n13 min spectrograph (0=HARPS, 1=NIRPS, 2=SPIROU)'
     output = np.array([starnums, Nharps, Nnirps, Nspirou, texpharps, texpnirps,
                        texpspirou, tobsharps, tobsnirps, tobsspirou, min_Nrv,
                        bestspectrograph_Nrv, min_tobs, bestspectrograph_tobs]).T
     np.savetxt('Results/median_results_3sigma_mp.dat', output, header=hdr,
                delimiter=',', fmt='%.4f')
-=======
-    hdr = 'TESS planet index\nNrv_HARPS\nNrv_NIRPS\nNrv_SPIROU\ntexp_HARPS ' + \
-          '[min]\ntexp_NIRPS [min]\ntexp_SPIROU [min]\ntobs_HARPS [hrs]\n' + \
-          'tobs_NIRPS [hrs]\ntobs_SPIROU [hrs]\nmin Nrv\nmin spectrograph ' + \
-          '(0=HARPS, 1=NIRPS, 2=SPIROU)\nmin tobs [hrs]\nmin spectrograph ' + \
-          '(0=HARPS, 1=NIRPS, 2=SPIROU)'
-    output = np.array([starnums, Nharps, Nnirps, Nspirou, texpharps, texpnirps,
-                       texpspirou, tobsharps, tobsnirps, tobsspirou, min_Nrv,
-                       bestspectrograph_Nrv, min_tobs, bestspectrograph_tobs]).T
-    np.savetxt('Results/median_results_3sigma_mp.dat', output, header=hdr, 
-	       delimiter=',', fmt='%.4f')
->>>>>>> 2127293c623481c49976119d4a263226856eb9e1
 
 
 def TESS_mp_5sigma():
@@ -107,15 +94,7 @@ def TESS_mp_5sigma():
     tobsspirou = Nspirou * texpspirou / 60
 
     # save results to file
-<<<<<<< HEAD
     hdr = 'TESS planet index\nmedian Nrv_HARPS\nmedianNrv_NIRPS\nmedian Nrv_SPIROU\ntexp_HARPS [min]\ntexp_NIRPS [min]\ntexp_SPIROU [min]\nmedian tobs_HARPS [hrs]\nmedian tobs_NIRPS [hrs]\nmedian tobs_SPIROU [hrs]\nmin median Nrv\nmin spectrograph (0=HARPS, 1=NIRPS, 2=SPIROU)\nmin median tobs [hrs]\nmin spectrograph (0=HARPS, 1=NIRPS, 2=SPIROU)'
-=======
-    hdr = 'TESS planet index\nNrv_HARPS\nNrv_NIRPS\nNrv_SPIROU\ntexp_HARPS ' + \
-          '[min]\ntexp_NIRPS [min]\ntexp_SPIROU [min]\ntobs_HARPS [hrs]\n' + \
-          'tobs_NIRPS [hrs]\ntobs_SPIROU [hrs]\nmin Nrv\nmin spectrograph ' + \
-          '(0=HARPS, 1=NIRPS, 2=SPIROU)\nmin tobs [hrs]\nmin spectrograph ' + \
-          '(0=HARPS, 1=NIRPS, 2=SPIROU)'
->>>>>>> 2127293c623481c49976119d4a263226856eb9e1
     output = np.array([starnums, Nharps, Nnirps, Nspirou, texpharps, texpnirps,
                        texpspirou, tobsharps, tobsnirps, tobsspirou, min_Nrv,
                        bestspectrograph_Nrv, min_tobs, bestspectrograph_tobs]).T
@@ -160,7 +139,6 @@ def TESS_rho_Xsigma(X, sigP=5e-5, fracsigMs=.1):
     tobsspirou = Nspirou * texpspirou / 60
 
     # save results to file
-<<<<<<< HEAD
     hdr = 'TESS planet index\nmedian Nrv_HARPS\nmedianNrv_NIRPS\nmedian Nrv_SPIROU\ntexp_HARPS [min]\ntexp_NIRPS [min]\ntexp_SPIROU [min]\nmedian tobs_HARPS [hrs]\nmedian tobs_NIRPS [hrs]\nmedian tobs_SPIROU [hrs]\nmin median Nrv\nmin spectrograph (0=HARPS, 1=NIRPS, 2=SPIROU)\nmin median tobs [hrs]\nmin spectrograph (0=HARPS, 1=NIRPS, 2=SPIROU)'
     output = np.array([starnums, Nharps, Nnirps, Nspirou, texpharps, texpnirps,
                        texpspirou, tobsharps, tobsnirps, tobsspirou, min_Nrv,
@@ -182,20 +160,6 @@ def get_full_results():
     out = np.zeros((Nstars, Nparams, 3))
     out[:,:,0], out[:,:,1], out[:,:,2] = m3, m5, rho3
     return out
-=======
-    hdr = 'TESS planet index\nNrv_HARPS\nNrv_NIRPS\nNrv_SPIROU\ntexp_HARPS ' + \
-          '[min]\ntexp_NIRPS [min]\ntexp_SPIROU [min]\ntobs_HARPS [hrs]\n' + \
-          'tobs_NIRPS [hrs]\ntobs_SPIROU [hrs]\nmin Nrv\nmin spectrograph ' + \
-          '(0=HARPS, 1=NIRPS, 2=SPIROU)\nmin tobs [hrs]\nmin spectrograph ' + \
-          '(0=HARPS, 1=NIRPS, 2=SPIROU)'
-    output = np.array([starnums, Nharps, Nnirps, Nspirou, texpharps, texpnirps,
-                       texpspirou, tobsharps, tobsnirps, tobsspirou, min_Nrv,
-                       bestspectrograph_Nrv, min_tobs, bestspectrograph_tobs]).T
-    np.savetxt(('Results/median_results_%.1fsigma_rho.dat'%X).replace('.','d'),
-               output, header=hdr, delimiter=',', fmt='%.4f')
-
-    
->>>>>>> 2127293c623481c49976119d4a263226856eb9e1
 
     
 def _compute_sigrp(frac_sigRs=.1):
