@@ -1,10 +1,17 @@
 from runTESS import *
 
 def do_i_run_this_job(planetindex, band_strs, systnum):
+<<<<<<< HEAD
     fname = 'Results/star%.4d/TESSplanet%.4d_%s_%.4d.dat'%(planetindex,
                                                            planetindex,
                                                            ''.join(band_strs),
                                                            systnum)
+=======
+    fname = 'Results/star%.4d/TESSplanet%.4d_%s_%.4d'%(planetindex,
+                                                       planetindex,
+                                                       ''.join(band_strs),
+                                                       systnum)
+>>>>>>> 2127293c623481c49976119d4a263226856eb9e1
     return not os.path.exists(fname)
 
 

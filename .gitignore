@@ -5,5 +5,8 @@
 /paper
 /plots
 /Results
+<<<<<<< HEAD
 /pickles
+=======
+>>>>>>> 2127293c623481c49976119d4a263226856eb9e1
 testsigmaRVphot.py
