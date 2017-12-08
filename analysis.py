@@ -15,7 +15,7 @@ def _get_inds_of_complete_systems(self):
                     files2keep.append(f)
     files2keep = np.ascontiguousarray(files2keep)
     return np.in1d(self.files, files2keep)    
-    
+   
 
 def TESS_mp_3sigma(self):
     '''
@@ -210,3 +210,42 @@ def _compute_Q(Gamma, T, depth, logsig):
 
 def _compute_sigdepth(depth, Q):
     return depth / Q
+
+
+def create_results_table(self):
+    '''Compile all the results into a table format for the paper.'''
+    # Get observing results
+    out = get_full_results()[:,:,0]  # 3sigma mp only
+    starnums = out[:,0]
+
+    # compile results for the table
+    str2write = ''
+    for i in starnums:
+	g = self.starnums_med == i
+	ra = self.ras_med[g]
+	dec = self.decs_med[g]
+	P = self.Ps_med[g]
+	mp = self.mps_med[g]
+	K = self.Ks_med[g]
+	S = self.Fs_med[g]
+	Ms = self.Mss_med[g]
+	Teff = self.Teffs_med[g]
+	dist = self.dists_med[g]
+	Bmag = self.Bmags_med[g]
+        Vmag = self.Vmags_med[g]
+        Ymag = self.Ymags_med[g]
+        Jmag = self.Jmags_med[g]
+        Hmag = self.Hmags_med[g]
+	vsini = self.vsinis_med[g]
+	sigmaRV_photO = self.sigmaRV_phot_med_H[g]
+        sigmaRV_photI = self.sigmaRV_phot_med_S[g]  # TEMP S to N
+	NrvO = self.Nrvs_med_H[g]
+        NrvI = self.Nrvs_med_S[g]  # TEMP S to N
+	tobsO = self.tobss_med_H[g]
+        tobsI = self.tobss_med_S[g]  # TEMP S to N
+	str2write += '%.2f  &  %.2f  &  %.3f  &  %.2f  &  %.2f  &  %.1f  &  %.2f  &  %i  &  %.1f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.1f  &  %.1f  &  %.1f  &  %.1f %s\n'%(ra,dec,P,mp,K,S,Ms,Teff,dist,Bmag,Vmag,Ymag,Jmag,Hmag,vsini,sigmaRV_photO,sigmaRV_photI,NrvO,NrvI,tobsO,tobsI,'\\\\ ')
+
+    # write to dat file
+    h = open('paper/resultstable.dat', 'w')
+    h.write(str2write)
+    h.close()
