@@ -51,7 +51,7 @@ class RVInformation:
             self.ras[i], self.decs[i], self.Ps[i], self.rps[i], self.mps[i], self.Ks[i], self.Fs[i], self.Mss[i], self.Rss[i], self.Teffs[i], self.dists[i], self.Prots[i], self.vsinis[i], self.Zs[i], self.sigmaRV_acts[i], self.sigmaRV_planets[i], self.Rs[i], self.apertures[i], self.QEs[i], self.fracsigmaK_targets[i], self.sigmaRV_phot[i], self.sigmaRV_eff[i], self.texps[i], self.tobss[i], self.Nrvs[i] = np.loadtxt(self.files[i])
             self.starnums[i] = int(self.files[i].split('star')[-1].split('/')[0])
             self.systnums[i] = int(self.files[i].split('_')[-1].split('.')[0])
-
+            
             # Get bands and magnitudes
             f = open(self.files[i], 'r')
             g = f.readlines()
@@ -80,8 +80,37 @@ class RVInformation:
             else:
                 raise ValueError("Spectra band do not contain a reference " + \
                                  "band.")
-                    
-                
+
+        self._get_HZflags()
+
+
+    def _get_HZflags(self):
+        # load baraffe data once
+        baraffe = np.loadtxt('input_data/BCAH98.dat')
+        barmass = baraffe[:,0]    # Msun
+        barage = baraffe[:,1]     # Gyrs
+        barL = baraffe[:,4]       # log(L/Lsun)
+        lint_L = lint(np.array([barmass, barage]).T, barL)
+
+        # set Kopparapu+2013 parameters
+        SeffSun = np.array((1.014, .3438))
+        a = np.array((8.1774e-5, 5.8942e-5))
+        b = np.array((1.7063e-9, 1.6558e-9))
+        c = np.array((-4.3241e-12, -3.0045e-12))
+        d = np.array((-6.6462e-16, -5.2983e-16))
+
+        # see if each planet is in the HZ
+        self.HZflags = np.zeros(self.nfiles)
+        for i in range(self.nfiles):
+            Ts = self.Teffs[i] - 5780.
+            Seff = SeffSun + a*Ts + b*Ts**2 + c*Ts**3 + d*Ts**4
+            Ls = 10**(lint_L(self.Mss[i], 2.))
+            dist = np.sqrt(Ls/Seff)
+            HZPlims = period_sma(dist, Ms, 0.)
+            self.HZflags[i] = 1. if (self.Ps[i] >= HZPlims.min()) & \
+                              (self.Ps[i] <= HZPlims.max()) else 0.
+        
+    
 
     def _initialize_median_arrays(self):
         self.starnums_med = np.unique(self.starnums)
@@ -90,6 +119,7 @@ class RVInformation:
         self.Ps_med, self.rps_med = np.zeros(self.nstars), np.zeros(self.nstars)
         self.mps_med, self.Ks_med = np.zeros(self.nstars), np.zeros(self.nstars)
         self.Fs_med, self.Mss_med = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.HZflags_med = np.zeros(self.nstars)
         self.Rss_med, self.Teffs_med = np.zeros(self.nstars), np.zeros(self.nstars)
         self.Bmags_med, self.Vmags_med = np.zeros(self.nstars), np.zeros(self.nstars)
         self.Ymags_med, self.Jmags_med = np.zeros(self.nstars), np.zeros(self.nstars)
@@ -131,6 +161,7 @@ class RVInformation:
             self.mps_med[i] = np.median(self.mps[g])
             self.Ks_med[i] = np.median(self.Ks[g])
             self.Fs_med[i] = np.median(self.Fs[g])
+            self.HZflags_med[i] = np.median(self.HZflags[g])
             self.Mss_med[i] = np.median(self.Mss[g])
             self.Rss_med[i] = np.median(self.Rss[g])
             self.Teffs_med[i] = np.median(self.Teffs[g])
