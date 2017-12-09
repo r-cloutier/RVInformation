@@ -3,6 +3,8 @@ import runTESS, rvs
 from uncertainties import unumpy as unp
 from get_tess_data import *
 
+global toverhead
+toverhead = 5.
 
 def _get_inds_of_complete_systems(self):
     starnums = np.unique(self.starnums)
@@ -40,19 +42,19 @@ def TESS_mp_3sigma(self):
             (self.spectrographs[inds] == 'H')
         Nharps[i]  = np.median(self.Nrvs[inds][h])
         texpharps[i] = self.texps[inds][h][0]
-        tobsharps[i] = Nharps[i] * texpharps[i] / 60
+        tobsharps[i] = Nharps[i] * (texpharps[i]+toverhead) / 60
 
         n = (self.starnums[inds] == starnums[i]) & \
             (self.spectrographs[inds] == 'N')
         Nnirps[i]  = np.median(self.Nrvs[inds][n])
         texpnirps[i] = self.texps[inds][n][0]
-        tobsnirps[i] = Nnirps[i] * texpnirps[i] / 60
+        tobsnirps[i] = Nnirps[i] * (texpnirps[i]+toverhead) / 60
         
         s = (self.starnums[inds] == starnums[i]) & \
             (self.spectrographs[inds] == 'S')
         Nspirou[i] = np.median(self.Nrvs[inds][s])
         texpspirou[i] = self.texps[inds][s][0]
-        tobsspirou[i] = Nspirou[i] * texpspirou[i] / 60
+        tobsspirou[i] = Nspirou[i] * (texpspirou[i]+toverhead) / 60
         
     # which spectrograph is the most efficient for each planet?
     Nrvs = np.array([Nharps, Nnirps, Nspirou]).T
@@ -89,9 +91,9 @@ def TESS_mp_5sigma():
     Nnirps *= frac_increase_Nrv
     Nspirou *= frac_increase_Nrv
 
-    tobsharps = Nharps * texpharps / 60
-    tobsnirps = Nnirps * texpnirps / 60
-    tobsspirou = Nspirou * texpspirou / 60
+    tobsharps = Nharps * (texpharps+toverhead) / 60
+    tobsnirps = Nnirps * (texpnirps+toverhead) / 60
+    tobsspirou = Nspirou * (texpspirou+toverhead) / 60
 
     # save results to file
     hdr = 'TESS planet index\nmedian Nrv_HARPS\nmedianNrv_NIRPS\nmedian Nrv_SPIROU\ntexp_HARPS [min]\ntexp_NIRPS [min]\ntexp_SPIROU [min]\nmedian tobs_HARPS [hrs]\nmedian tobs_NIRPS [hrs]\nmedian tobs_SPIROU [hrs]\nmin median Nrv\nmin spectrograph (0=HARPS, 1=NIRPS, 2=SPIROU)\nmin median tobs [hrs]\nmin spectrograph (0=HARPS, 1=NIRPS, 2=SPIROU)'
@@ -134,9 +136,9 @@ def TESS_rho_Xsigma(X, sigP=5e-5, fracsigMs=.1):
     Nnirps *= frac_increase_Nrv
     Nspirou *= frac_increase_Nrv
 
-    tobsharps = Nharps * texpharps / 60
-    tobsnirps = Nnirps * texpnirps / 60
-    tobsspirou = Nspirou * texpspirou / 60
+    tobsharps = Nharps * (texpharps+toverhead) / 60
+    tobsnirps = Nnirps * (texpnirps+toverhead) / 60
+    tobsspirou = Nspirou * (texpspirou+toverhead) / 60
 
     # save results to file
     hdr = 'TESS planet index\nmedian Nrv_HARPS\nmedianNrv_NIRPS\nmedian Nrv_SPIROU\ntexp_HARPS [min]\ntexp_NIRPS [min]\ntexp_SPIROU [min]\nmedian tobs_HARPS [hrs]\nmedian tobs_NIRPS [hrs]\nmedian tobs_SPIROU [hrs]\nmin median Nrv\nmin spectrograph (0=HARPS, 1=NIRPS, 2=SPIROU)\nmin median tobs [hrs]\nmin spectrograph (0=HARPS, 1=NIRPS, 2=SPIROU)'

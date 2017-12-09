@@ -2,12 +2,14 @@ import numpy as np
 import pylab as plt
 from uncertainties import unumpy as unp
 
-global Teffedges, Tefflabels, rpedges, rplabels
-Teffedges = [25e2, 32e2, 38e2, 76e2, 12e3]
+global toverhead, Teffedges, Tefflabels, rpedges, rplabels, rplabels2
+toverhead = 5.
+Teffedges = np.array([25e2, 32e2, 38e2, 76e2, 12e3])
 Tefflabels = ['mid-late M', 'early-mid M', 'FGK', 'BA']
 rpedges = np.array([0, 1.25, 2, 4, 30])
 rplabels = ['Earths','Super-Earths','Sub-Neptunes','Giants']
-
+rplabels2 = ['$<1.25 R_{\oplus}$','$1.25-2 R_{\oplus}$',
+                 '$2-4 R_{\oplus}$','$>4 R_{\oplus}$']
 
 def compute_Nrv(sigeff, sigK):
     sigeff = np.ascontiguousarray(sigeff).astype(float)
@@ -66,8 +68,6 @@ def plot_tobs_hists_v_Teff(self, nbins=40, pltt=True, label=False):
 
 def plot_tobs_hists_v_rp(self, nbins=40, pltt=True, label=False):
     bins = np.logspace(0,5,nbins)
-    rplabels2 = ['$<1.25 R_{\oplus}$','$1.25-2 R_{\oplus}$',
-                 '$2-4 R_{\oplus}$','$>4 R_{\oplus}$']
     opt, nir = self.spectrographs == 'H', self.spectrographs == 'N'
     fig = plt.figure(figsize=(12,3.4))
     for i in range(len(rpedges)-1):
@@ -142,16 +142,16 @@ def plot_tobs_F(self, errorbar=False, pltt=True, label=False):
     g = self.Teffs_med > 0
 
     if errorbar:
-        ax.errorbar(self.Fs_med[g], self.tobss_med_I[g], self.tobss_emed_S[g],
+        ax.errorbar(self.Fs_med[g], self.tobss_med_I[g], self.tobss_emed_N[g],
                     fmt='ro', ms=3, capsize=0, elinewidth=.4, alpha=.6)
         ax.errorbar(self.Fs_med[g], self.tobss_med_H[g], self.tobss_emed_H[g],
                     fmt='bo', ms=3, capsize=0, elinewidth=.4, alpha=.6)
     else:  # point estimates
-        ax.scatter(self.Fs_med[g], self.tobss_med_S[g], edgecolor='r',
-                   s=self.Ks_med[g]*2,
+        ax.scatter(self.Fs_med[g], self.tobss_med_N[g], edgecolor='r',
+                   s=20,
                    alpha=1, facecolors='none', marker='d', label='nIR')
         ax.scatter(self.Fs_med[g], self.tobss_med_H[g], edgecolor='b',
-                   s=2*self.mps_med[g],
+                   s=20,
                    alpha=1, facecolors='none', marker='o', label='Optical')
         
     ax.set_xscale('log'), ax.set_yscale('log')
@@ -188,12 +188,12 @@ def plot_Nrv_mag(self, mag='V', errorbar=False, pltt=True, label=False):
     g = self.Teffs_med > 0
 
     if errorbar:
-        ax.errorbar(xarr[g], self.Nrvs_med_S[g], self.Nrvs_emed_S[g],
+        ax.errorbar(xarr[g], self.Nrvs_med_N[g], self.Nrvs_emed_N[g],
                     fmt='ro', ms=3, capsize=0, elinewidth=.4, alpha=.5)
         ax.errorbar(xarr[g], self.Nrvs_med_H[g], self.Nrvs_emed_H[g],
                     fmt='bo', ms=3, capsize=0, elinewidth=.4, alpha=.5)
     else:  # point estimates
-        ax.plot(xarr[g], self.Nrvs_med_S[g], 'ro', ms=8, alpha=.5)
+        ax.plot(xarr[g], self.Nrvs_med_N[g], 'ro', ms=8, alpha=.5)
         ax.plot(xarr[g], self.Nrvs_med_H[g], 'bo', ms=8, alpha=.5)
         
     #ax.set_xlim((1e4,1e-1))
@@ -209,7 +209,7 @@ def plot_Nrvratio(self, pltt=True, label=False):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    ratio = unp.uarray(self.Nrvs_med_S, self.Nrvs_emed_S) / \
+    ratio = unp.uarray(self.Nrvs_med_N, self.Nrvs_emed_N) / \
             unp.uarray(self.Nrvs_med_H, self.Nrvs_emed_H)
     
     ax.errorbar(self.Teffs_med, unp.nominal_values(ratio),
@@ -267,48 +267,92 @@ def plot_NIRPSvSPIROU(self, pltt=True, label=False):
 
 
 def plot_cumulative_detections_v_tobs(self, pltt=True, label=False,
-                                      harps=True, nirps=True, tmax=1e4):
-    tarr = np.arange(0,tmax,1)
-    fig = plt.figure(figsize=(12,3))
+                                      harps=True, nirps=True, tmax=3e2):
+    #tarr = np.arange(0,tmax,1)
+    fig = plt.figure(figsize=(12,3.3))
 
     for i in range(Teffedges.size-1):
 	ax = fig.add_subplot(1, Teffedges.size-1, i+1)
 
 	# HARPS total observing time
 	if harps:
-            for j in range(rpedges.size-1):
-                g = (self.Teffs_med >= Teffedges[i]) & \
-                    (self.Teffs_med < Teffedges[i+1]) & \
-                    (self.rps_med >= rpedges[j]) & \
-                    (self.rps_med < rpedges[j+1])
-	        tobs = np.cumsum(np.sort(self.tobss_med_H[g]))
-	        Ndet = np.arange(1,tobs.size+1)
-	        g = tobs <= tmax
-	        ax.plot(tobs[g], Ndet[g], 'b-', drawstyle='steps')
-	        if i == 0:
-		    ax.text(.1, .85, 'HARPS-like', color='b', fontsize=10, 
-			    weight='normal', transform=ax.transAxes)
+            g = (self.rps_med >= rpedges[i]) & \
+                (self.rps_med < rpedges[i+1])
+	    tobs = np.append(0, np.cumsum(np.sort(self.tobss_med_H[g])))
+	    Ndet = np.arange(tobs.size)
+	    g = tobs <= tmax
+	    ax.plot(tobs[g], Ndet[g], 'b-', drawstyle='steps')
+	    if i == 0:
+		ax.text(.5, .3, 'HARPS-like', color='b', fontsize=10, 
+			weight='normal', transform=ax.transAxes)
  
         # NIRPS total observing time
 	if nirps:
             g = (self.rps_med >= rpedges[i]) & (self.rps_med < rpedges[i+1])
-            tobs = np.cumsum(np.sort(self.tobss_med_S[g]))  # TEMP
-            Ndet = np.arange(1,tobs.size+1)
+            tobs = np.append(0, np.cumsum(np.sort(self.tobss_med_N[g])))
+            Ndet = np.arange(tobs.size)
 	    g = tobs <= tmax
             ax.plot(tobs[g], Ndet[g], 'r-', drawstyle='steps')
 	    if i == 0:
-                ax.text(.1, .75, 'NIRPS-like', color='r', fontsize=11, 
+                ax.text(.5, .2, 'NIRPS-like', color='r', fontsize=11, 
                         weight='normal', transform=ax.transAxes)
 
-	ax.set_title(rplabels[i])
+        ax.set_title('%s\n%s'%(rplabels[i], rplabels2[i]), fontsize=10)
         ax.set_xlabel('Total observing time [hours]', fontsize=9)
 	if i == 0:
 	    ax.set_ylabel('Cumulative number of\nplanet detections')	
 	ax.minorticks_on()
-    	ax.set_xscale('log')
-    	ax.set_xlim((1,tmax))
+    	#ax.set_xscale('log')
+    	ax.set_xlim((0,tmax))
 
-    fig.subplots_adjust(left=.08, bottom=.17, right=.97, wspace=.24)
+    fig.subplots_adjust(left=.08, bottom=.17, top=.86, right=.97, wspace=.24)
+    if label:
+        plt.savefig('plots/cumulativetobs_rp.png')
     if pltt:
 	plt.show()
     plt.close('all')
+
+    
+def plot_cumulative_detections_v_tobs_MR(self, pltt=True, label=False,
+                                         harps=True, nirps=True, tmax=1e3):
+    fig = plt.figure(figsize=(7,5.5))
+    ax = fig.add_subplot(111)
+    
+    # HARPS total observing time
+    if harps:
+        g = self.rps_med <= 2
+        Nrvs = self.Nrvs_med_H[g] * (.327 / .188)**2
+        tobss = Nrvs * (self.texps_med_H[g] + toverhead) / 60
+	tobs = np.append(0, np.cumsum(np.sort(tobss)))
+	Ndet = np.arange(tobs.size)
+	g = tobs <= tmax
+	ax.plot(tobs[g], Ndet[g], 'b-', drawstyle='steps')
+	ax.text(.6, .3, 'Optical', color='b', fontsize=14,
+		weight='normal', transform=ax.transAxes)
+ 
+    # NIRPS total observing time
+    if nirps:
+        g = self.rps_med <= 2
+        Nrvs = self.Nrvs_med_N[g] * (.327 / .188)**2
+        tobss = Nrvs * (self.texps_med_N[g] + toverhead) / 60
+        tobs = np.append(0, np.cumsum(np.sort(tobss)))
+	Ndet = np.arange(tobs.size)
+	g = tobs <= tmax
+	ax.plot(tobs[g], Ndet[g], 'r-', drawstyle='steps')
+	ax.text(.6, .25, 'nIR', color='r', fontsize=12, 
+		weight='normal', transform=ax.transAxes)
+
+    ax.set_xlabel('Total observing time [hours]')
+    ax.set_ylabel('Cumulative number of\nplanet detections')	
+    ax.minorticks_on()
+    ax.set_xlim((0,tmax))
+
+    #fig.subplots_adjust(left=.08, bottom=.17, top=.86, right=.97, wspace=.24)
+    if label:
+        plt.savefig('plots/cumulativetobs_MR.png')
+    if pltt:
+	plt.show()
+    plt.close('all')
+
+    #return tobs, Ndet
+
