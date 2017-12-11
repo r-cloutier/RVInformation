@@ -1,6 +1,13 @@
 import numpy as np
 import pylab as plt
 from uncertainties import unumpy as unp
+from scipy.interpolate import interp1d
+from scipy.ndimage import gaussian_filter1d
+import matplotlib as mpl
+
+mpl.rc('xtick', labelsize=12)
+mpl.rc('ytick', labelsize=12)
+mpl.rc('axes', titlepad=3)
 
 global toverhead, Teffedges, Tefflabels, rpedges, rplabels, rplabels2
 toverhead = 5.
@@ -8,8 +15,9 @@ Teffedges = np.array([25e2, 32e2, 38e2, 76e2, 12e3])
 Tefflabels = ['mid-late M', 'early-mid M', 'FGK', 'BA']
 rpedges = np.array([0, 1.25, 2, 4, 30])
 rplabels = ['Earths','Super-Earths','Sub-Neptunes','Giants']
-rplabels2 = ['$<1.25 R_{\oplus}$','$1.25-2 R_{\oplus}$',
-                 '$2-4 R_{\oplus}$','$>4 R_{\oplus}$']
+rplabels2 = ['$<$1.25 R$_{\oplus}$','1.25-2 R$_{\oplus}$',
+                 '2-4 R$_{\oplus}$','$>$4 R$_{\oplus}$']
+
 
 def compute_Nrv(sigeff, sigK):
     sigeff = np.ascontiguousarray(sigeff).astype(float)
@@ -267,85 +275,320 @@ def plot_NIRPSvSPIROU(self, pltt=True, label=False):
 
 
 def plot_cumulative_detections_v_tobs(self, pltt=True, label=False,
-                                      harps=True, nirps=True, tmax=3e2):
+                                      harps=True, nirps=True, tmax=1e3,
+                                      observebesttargetsfirst=True):
     #tarr = np.arange(0,tmax,1)
-    fig = plt.figure(figsize=(12,3.3))
+    fig = plt.figure(figsize=(9.5,4))
 
-    for i in range(Teffedges.size-1):
-	ax = fig.add_subplot(1, Teffedges.size-1, i+1)
+    for i in range(rpedges.size-1):
+	ax1 = fig.add_subplot(2, rpedges.size-1, i+1)
 
 	# HARPS total observing time
 	if harps:
             g = (self.rps_med >= rpedges[i]) & \
                 (self.rps_med < rpedges[i+1])
-	    tobs = np.append(0, np.cumsum(np.sort(self.tobss_med_H[g])))
+            tobs = np.sort(self.tobss_med_H[g]) if observebesttargetsfirst \
+                   else self.tobss_med_H[g]
+	    tobs = np.append(0, np.cumsum(tobs))
 	    Ndet = np.arange(tobs.size)
 	    g = tobs <= tmax
-	    ax.plot(tobs[g], Ndet[g], 'b-', drawstyle='steps')
+	    ax1.plot(tobs[g], Ndet[g], 'b--', lw=2, drawstyle='steps')
+            # plot derivative
 	    if i == 0:
-		ax.text(.5, .3, 'HARPS-like', color='b', fontsize=10, 
-			weight='normal', transform=ax.transAxes)
- 
+                ax1.plot([410,560], np.repeat(3.2,2), 'b--', lw=2)
+		ax1.text(6e2, 3.2, 'Optical', color='b', fontsize=10, 
+			 weight='semibold', verticalalignment='center')
+            # plot derivative
+            ax2 = fig.add_subplot(2, rpedges.size-1, i+1+rpedges.size-1)
+            tobs2, dNdt = _compute_curve_derivative(tobs[g], Ndet[g])
+            ax2.plot(tobs2, dNdt, 'b--', lw=2)
+            threshold = 1./20
+            ax2.plot([0,tmax], np.repeat(threshold,2), 'k--', lw=.9)
+            if i == 0:
+                ax2.text(tmax*.25, threshold*1.03,
+                         '%i hours / detection'%(1./threshold),
+                         verticalalignment='bottom', fontsize=9)
+                
         # NIRPS total observing time
 	if nirps:
             g = (self.rps_med >= rpedges[i]) & (self.rps_med < rpedges[i+1])
-            tobs = np.append(0, np.cumsum(np.sort(self.tobss_med_N[g])))
+            tobs = np.sort(self.tobss_med_N[g]) if observebesttargetsfirst \
+                   else self.tobss_med_N[g]
+            tobs = np.append(0, np.cumsum(tobs))
             Ndet = np.arange(tobs.size)
 	    g = tobs <= tmax
-            ax.plot(tobs[g], Ndet[g], 'r-', drawstyle='steps')
+            #_compute_curve_derivative(tobs[g], Ndet[g])
+	    ax1.plot(tobs[g], Ndet[g], 'r-', drawstyle='steps')
 	    if i == 0:
-                ax.text(.5, .2, 'NIRPS-like', color='r', fontsize=11, 
-                        weight='normal', transform=ax.transAxes)
+                ax1.plot([410,550], np.repeat(1.2,2), 'r-')
+                ax1.text(6e2, 1.2, 'Near-IR', color='r', fontsize=10, 
+                         weight='semibold', verticalalignment='center')
+            # plot derivative
+            tobs2, dNdt = _compute_curve_derivative(tobs[g], Ndet[g])
+            ax2.plot(tobs2, dNdt, 'r-')
+                
+        ax1.set_title('%s\n%s'%(rplabels[i], rplabels2[i]), fontsize=10)
+        ax2.set_xlabel('Total observing time [hours]', fontsize=9)
+        ax1.set_xticklabels('')
+        ax1.minorticks_on(), ax2.minorticks_on()
+    	ax2.set_yscale('log'), ax2.set_ylim((1e-2,1.3))
+    	ax1.set_xlim((0,tmax)), ax2.set_xlim((0,tmax))
 
-        ax.set_title('%s\n%s'%(rplabels[i], rplabels2[i]), fontsize=10)
-        ax.set_xlabel('Total observing time [hours]', fontsize=9)
-	if i == 0:
-	    ax.set_ylabel('Cumulative number of\nplanet detections')	
-	ax.minorticks_on()
-    	#ax.set_xscale('log')
-    	ax.set_xlim((0,tmax))
+        if i == 0:
+	    ax1.set_ylabel('Cumulative number of\nplanet detections',
+                           fontsize=10)
+            ax2.set_ylabel('dN/dt\n[detections / hour]', fontsize=10,
+                           labelpad=0)
+            ax2.set_yticks(np.logspace(-2,0,3))
+            ax2.set_yticklabels(['0.01','0.1','1'])
+        else:
+            ax2.set_yticklabels('')
 
-    fig.subplots_adjust(left=.08, bottom=.17, top=.86, right=.97, wspace=.24)
+        # second derivative axis
+        ax3 = ax2.twinx()
+        ax3.set_ylim(tuple(1./np.ascontiguousarray(ax2.get_ylim())))
+        ax3.set_yscale('log')
+        if i < rpedges.size-2:
+            ax3.set_yticklabels('')
+        else:
+            ax3.set_yticks(np.logspace(2,0,3))
+            ax3.set_yticklabels(['%i'%i for i in np.logspace(2,0,3)])
+            ax3.set_ylabel('dt/dN\n[hours / detection]', fontsize=10,
+                           labelpad=0)
+        
+    fig.subplots_adjust(left=.08, bottom=.105, top=.9, right=.929,
+                        hspace=0, wspace=.22)
     if label:
         plt.savefig('plots/cumulativetobs_rp.png')
     if pltt:
 	plt.show()
     plt.close('all')
 
+
+def plot_cumulative_detections_v_tobs_Teff(self, pltt=True, label=False,
+                                           harps=True, nirps=True, tmax=1e3,
+                                           observebesttargetsfirst=True):
+    fig = plt.figure(figsize=(9.5,4))
+
+    for i in range(Teffedges.size-1):
+	ax1 = fig.add_subplot(2, Teffedges.size-1, -1*i+4)
+
+	# HARPS total observing time
+	if harps:
+            g = (self.Teffs_med >= Teffedges[i]) & \
+                (self.Teffs_med < Teffedges[i+1])
+            tobs = np.sort(self.tobss_med_H[g]) if observebesttargetsfirst \
+                   else self.tobss_med_H[g]
+	    tobs = np.append(0, np.cumsum(tobs))
+	    Ndet = np.arange(tobs.size)
+	    g = tobs <= tmax
+	    ax1.plot(tobs[g], Ndet[g], 'b--', lw=2, drawstyle='steps')
+            # plot derivative
+	    if i == 3:
+                ax1.plot([410,560], np.repeat(25,2), 'b--', lw=2)
+		ax1.text(6e2, 25, 'Optical', color='b', fontsize=10, 
+			 weight='semibold', verticalalignment='center')
+            # plot derivative
+            ax2 = fig.add_subplot(2, Teffedges.size-1, -1*i+4+Teffedges.size-1)
+            tobs2, dNdt = _compute_curve_derivative(tobs[g], Ndet[g])
+            ax2.plot(tobs2, dNdt, 'b--', lw=2)
+            threshold = 1./20
+            ax2.plot([0,tmax], np.repeat(threshold,2), 'k--', lw=.9)
+            if i == 3:
+                ax2.text(tmax*.25, threshold*1.03,
+                         '%i hours / detection'%(1./threshold),
+                         verticalalignment='bottom', fontsize=9)
+                
+        # NIRPS total observing time
+	if nirps:
+            g = (self.Teffs_med >= Teffedges[i]) & \
+                (self.Teffs_med < Teffedges[i+1])
+            tobs = np.sort(self.tobss_med_N[g]) if observebesttargetsfirst \
+                   else self.tobss_med_N[g]
+            tobs = np.append(0, np.cumsum(tobs))
+            Ndet = np.arange(tobs.size)
+	    g = tobs <= tmax
+            #_compute_curve_derivative(tobs[g], Ndet[g])
+	    ax1.plot(tobs[g], Ndet[g], 'r-', drawstyle='steps')
+	    if i == 3:
+                ax1.plot([410,550], np.repeat(20,2), 'r-')
+                ax1.text(6e2, 20, 'Near-IR', color='r', fontsize=10, 
+                         weight='semibold', verticalalignment='center')
+            # plot derivative
+            tobs2, dNdt = _compute_curve_derivative(tobs[g], Ndet[g])
+            ax2.plot(tobs2, dNdt, 'r-')
+            
+        ax1.set_title('%s\n%i $\leq$ T$_{eff} <$ %i'%(Tefflabels[i],
+                                                    Teffedges[i],
+                                                    Teffedges[i+1]),
+                      fontsize=10)
+        ax2.set_xlabel('Total observing time [hours]', fontsize=9)
+        ax1.set_xticklabels('')
+        ax1.minorticks_on(), ax2.minorticks_on()
+    	ax2.set_yscale('log'), ax2.set_ylim((1e-2,1.3))
+    	ax1.set_xlim((0,tmax)), ax2.set_xlim((0,tmax))
+
+        if i == 3:
+	    ax1.set_ylabel('Cumulative number of\nplanet detections',
+                           fontsize=10)
+            ax2.set_ylabel('dN/dt\n[detections / hour]', fontsize=10,
+                           labelpad=0)
+            ax2.set_yticks(np.logspace(-2,0,3))
+            ax2.set_yticklabels(['0.01','0.1','1'])
+        else:
+            ax2.set_yticklabels('')
+
+        # second derivative axis
+        ax3 = ax2.twinx()
+        ax3.set_ylim(tuple(1./np.ascontiguousarray(ax2.get_ylim())))
+        ax3.set_yscale('log')
+        if i == 0:
+            ax3.set_yticks(np.logspace(2,0,3))
+            ax3.set_yticklabels(['%i'%i for i in np.logspace(2,0,3)])
+            ax3.set_ylabel('dt/dN\n[hours / detection]', fontsize=10,
+                           labelpad=0)
+        else:
+            ax3.set_yticklabels('')
+            
+    fig.subplots_adjust(left=.08, bottom=.105, top=.9, right=.929,
+                        hspace=0, wspace=.22)
+    if label:
+        plt.savefig('plots/cumulativetobs_Teff.png')
+    if pltt:
+	plt.show()
+    plt.close('all')
     
-def plot_cumulative_detections_v_tobs_MR(self, pltt=True, label=False,
-                                         harps=True, nirps=True, tmax=1e3):
-    fig = plt.figure(figsize=(7,5.5))
-    ax = fig.add_subplot(111)
+    
+def plot_cumulative_detections_v_tobs_50(self, pltt=True, label=False,
+                                         harps=True, nirps=True,
+                                         observebesttargetsfirst=True):
+    fig = plt.figure(figsize=(5,5))
+    ax1 = fig.add_subplot(211)
+    ax2 = fig.add_subplot(212)
     
     # HARPS total observing time
     if harps:
         g = self.rps_med <= 2
-        Nrvs = self.Nrvs_med_H[g] * (.327 / .188)**2
-        tobss = Nrvs * (self.texps_med_H[g] + toverhead) / 60
-	tobs = np.append(0, np.cumsum(np.sort(tobss)))
+        tobs = np.sort(self.tobss_med_H[g]) if observebesttargetsfirst \
+                   else self.tobss_med_H[g]
+	tobs = np.append(0, np.cumsum(tobs))[:51]
 	Ndet = np.arange(tobs.size)
-	g = tobs <= tmax
-	ax.plot(tobs[g], Ndet[g], 'b-', drawstyle='steps')
-	ax.text(.6, .3, 'Optical', color='b', fontsize=14,
-		weight='normal', transform=ax.transAxes)
- 
+        ax1.plot(tobs, Ndet, 'b-', drawstyle='steps')
+	ax1.text(.6, .3, 'Optical', color='b', fontsize=14,
+		 weight='semibold', transform=ax1.transAxes)
+        # plot derivative
+        tobs2, dNdt = _compute_curve_derivative(tobs, Ndet)
+        ax2.plot(tobs2, dNdt, 'b-')
+        threshold = 1./20  # detections / hour
+        ax2.plot(ax1.get_xlim(), np.repeat(threshold,2), 'k--')
+        ax2.text(ax1.get_xlim()[1]*.08, threshold*.9,
+                 '%i hours / detection'%(1./threshold),
+                 verticalalignment='top', fontsize=10)
+            
     # NIRPS total observing time
     if nirps:
         g = self.rps_med <= 2
+        tobs = np.sort(self.tobss_med_N[g]) if observebesttargetsfirst \
+               else self.tobss_med_N[g]
+        tobs = np.append(0, np.cumsum(tobs))[:51]
+	Ndet = np.arange(tobs.size)
+	ax1.plot(tobs, Ndet, 'r-', drawstyle='steps')
+	ax1.text(.6, .25, 'nIR', color='r', fontsize=12, 
+		 weight='semibold', transform=ax1.transAxes)
+        # plot derivative
+        tobs2, dNdt = _compute_curve_derivative(tobs, Ndet)
+        ax2.plot(tobs2, dNdt, 'r-')    
+
+
+    ax2.set_xlabel('Total observing time [hours]', fontsize=11)
+    ax2.set_ylabel('dN/dt\n[detections / hours]', fontsize=11, labelpad=0)
+    ax1.set_ylabel('Cumulative number of\nplanet detections', fontsize=11)	
+    ax1.minorticks_on(), ax2.minorticks_on()
+    ax1.set_xticklabels('')
+    ax2.set_yscale('log')
+    ax2.set_ylim((1e-2,1e0))
+    ax2.set_xlim(ax2.set_xlim()), ax1.set_xlim(ax2.set_xlim())
+
+    
+    ax3 = ax2.twinx()
+    ax3.set_ylim(tuple(1./np.ascontiguousarray(ax2.get_ylim())))
+    ax3.set_yscale('log')
+    ax3.set_yticks(np.logspace(2,0,3))
+    ax3.set_yticklabels(['%i'%i for i in np.logspace(2,0,3)])
+    ax3.set_ylabel('dt/dN\n[hours / detection]', fontsize=11,
+                   labelpad=0)
+
+    fig.subplots_adjust(left=.16, bottom=.09, top=.98, right=.86,
+                        hspace=0)
+    if label:
+        plt.savefig('plots/cumulativetobs_50.png')
+    if pltt:
+	plt.show()
+    plt.close('all')
+
+
+    
+def plot_cumulative_detections_v_tobs_MR(self, pltt=True, label=False,
+                                         harps=True, nirps=True, tmax=1e3,
+                                         observebesttargetsfirst=True):
+    fig = plt.figure(figsize=(7,5.5))
+    ax1 = fig.add_subplot(211)
+    ax2 = fig.add_subplot(212)
+    
+    # HARPS total observing time
+    if harps:
+        g = self.rps_med <= 4
+        Nrvs = self.Nrvs_med_H[g] * (.327 / .188)**2
+        tobss = Nrvs * (self.texps_med_H[g] + toverhead) / 60
+        tobs = np.sort(tobss) if observebesttargetsfirst else tobss
+        tobs = np.append(0, np.cumsum(tobs))
+        Ndet = np.arange(tobs.size)
+	g = tobs <= tmax
+	#_compute_curve_derivative(tobs[g], Ndet[g])
+        ax1.plot(tobs[g], Ndet[g], 'b-', drawstyle='steps')
+	ax1.text(.6, .3, 'Optical', color='b', fontsize=14,
+		 weight='normal', transform=ax1.transAxes)
+        # plot derivative
+        tobs2, dNdt = _compute_curve_derivative(tobs[g], Ndet[g])
+        ax2.plot(tobs2, dNdt, 'b-')
+        threshold = 1./20  # detections / hour
+        ax2.plot([0,tmax], np.repeat(threshold,2), 'k--')
+        ax2.text(tmax*.08, threshold*.8, '%i hours / detection'%(1./threshold),
+                 verticalalignment='top', fontsize=10)
+ 
+    # NIRPS total observing time
+    if nirps:
+        g = self.rps_med <= 4
         Nrvs = self.Nrvs_med_N[g] * (.327 / .188)**2
         tobss = Nrvs * (self.texps_med_N[g] + toverhead) / 60
-        tobs = np.append(0, np.cumsum(np.sort(tobss)))
+        tobs = np.sort(tobss) if observebesttargetsfirst else tobss
+        tobs = np.append(0, np.cumsum(tobs))
 	Ndet = np.arange(tobs.size)
 	g = tobs <= tmax
-	ax.plot(tobs[g], Ndet[g], 'r-', drawstyle='steps')
-	ax.text(.6, .25, 'nIR', color='r', fontsize=12, 
-		weight='normal', transform=ax.transAxes)
+	#_compute_curve_derivative(tobs[g], Ndet[g])
+        ax1.plot(tobs[g], Ndet[g], 'r-', drawstyle='steps')
+	ax1.text(.6, .25, 'nIR', color='r', fontsize=12, 
+		 weight='normal', transform=ax1.transAxes)
+        # plot derivative
+        tobs2, dNdt = _compute_curve_derivative(tobs[g], Ndet[g])
+        ax2.plot(tobs2, dNdt, 'r-')
 
-    ax.set_xlabel('Total observing time [hours]')
-    ax.set_ylabel('Cumulative number of\nplanet detections')	
-    ax.minorticks_on()
-    ax.set_xlim((0,tmax))
+    ax2.set_xlabel('Total observing time [hours]', fontsize=11)
+    ax2.set_ylabel('dN/dt\n[detections / hours]', fontsize=11)
+    ax1.set_ylabel('Cumulative number of\nplanet detections', fontsize=11)	
+    ax1.minorticks_on(), ax2.minorticks_on()
+    ax1.set_xticklabels('')
+    ax2.set_yscale('log')
+    ax2.set_ylim((1e-2,1e0))
+    ax1.set_xlim((0,tmax)), ax2.set_xlim((0,tmax))
+
+    ax3 = ax2.twinx()
+    ax3.set_ylim(tuple(1./np.ascontiguousarray(ax2.get_ylim())))
+    ax3.set_yscale('log')
+    ax3.set_yticks(np.logspace(2,0,3))
+    ax3.set_yticklabels(['%i'%i for i in np.logspace(2,0,3)],
+                        fontsize=11)
+    ax3.set_ylabel('dt/dN\n[hours / detection]', fontsize=11)
 
     #fig.subplots_adjust(left=.08, bottom=.17, top=.86, right=.97, wspace=.24)
     if label:
@@ -354,5 +597,18 @@ def plot_cumulative_detections_v_tobs_MR(self, pltt=True, label=False,
 	plt.show()
     plt.close('all')
 
-    #return tobs, Ndet
+    
 
+def _compute_curve_derivative(tobs, Ndet):
+    # interpolate to get uniform spacing in time
+    fint = interp1d(tobs, Ndet)
+    tobs2 = np.linspace(tobs.min(), tobs.max(), 1e3)
+    Ndet2 = fint(tobs2)
+
+    # smooth curve
+    Ndet_smooth = gaussian_filter1d(Ndet2, sigma=5)
+
+    # take derivative
+    dt = np.diff(tobs2)[0]
+    dNdt = np.gradient(Ndet2, dt)
+    return tobs2, dNdt
