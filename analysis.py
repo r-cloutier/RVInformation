@@ -215,15 +215,20 @@ def _compute_sigdepth(depth, Q):
 
 
 def create_results_table(self):
-    '''Compile all the results into a table format for the paper.'''
+    '''Compile all the stellar parameters and results into table formats for 
+    the paper.'''
     # Get observing results
     out = get_full_results()[:,:,0]  # 3sigma mp only
     starnums = out[:,0]
 
     # compile results for the table
-    str2write = ''
+    stars2write = ''
+    results2write = ''
     for i in starnums:
 	g = self.starnums_med == i
+        TOI = '%.4d'%(i+1)
+	if i >= 50:
+	    TOI = '%'+TOI
 	ra = self.ras_med[g]
 	dec = self.decs_med[g]
 	P = self.Ps_med[g]
@@ -239,15 +244,24 @@ def create_results_table(self):
         Jmag = self.Jmags_med[g]
         Hmag = self.Hmags_med[g]
 	vsini = self.vsinis_med[g]
+        evsini = self.vsinis_emed[g]
+        stars2write += '%s  &  %.2f  &  %.2f  &  %.3f  &  %.2f  &  %.2f  &  %.1f  &  %.2f  &  %i  &  %.1f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  %s\n'%(TOI,ra,dec,P,mp,K,S,Ms,Teff,dist,Bmag,Vmag,Ymag,Jmag,Hmag,vsini,evsini,'\\\\ ')
 	sigmaRV_photO = self.sigmaRV_phot_med_H[g]
-        sigmaRV_photI = self.sigmaRV_phot_med_S[g]  # TEMP S to N
-	NrvO = self.Nrvs_med_H[g]
-        NrvI = self.Nrvs_med_S[g]  # TEMP S to N
+        sigmaRV_photI = self.sigmaRV_phot_med_N[g]
+        sigmaRV_act = self.sigmaRV_acts_med[g]
+        sigmaRV_planet = self.sigmaRV_planets_med[g]
+        sigmaRV_effO = self.sigmaRV_eff_med_H[g]
+        sigmaRV_effI = self.sigmaRV_eff_med_N[g]
+        NrvO = self.Nrvs_med_H[g]
+        NrvI = self.Nrvs_med_N[g]
 	tobsO = self.tobss_med_H[g]
-        tobsI = self.tobss_med_S[g]  # TEMP S to N
-	str2write += '%.2f  &  %.2f  &  %.3f  &  %.2f  &  %.2f  &  %.1f  &  %.2f  &  %i  &  %.1f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.1f  &  %.1f  &  %.1f  &  %.1f %s\n'%(ra,dec,P,mp,K,S,Ms,Teff,dist,Bmag,Vmag,Ymag,Jmag,Hmag,vsini,sigmaRV_photO,sigmaRV_photI,NrvO,NrvI,tobsO,tobsI,'\\\\ ')
+        tobsI = self.tobss_med_N[g]	
+        results2write += '%s  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.2f  &  %.1f  &  %.1f  &  %.1f  &  %.1f %s\n'%(TOI,sigmaRV_photO,sigmaRV_photI,sigmaRV_act,sigmaRV_planet,sigmaRV_effO,sigmaRV_effI,NrvO,NrvI,tobsO,tobsI,'\\\\ ')
 
     # write to dat file
+    ##h = open('paper/startable.dat', 'w')
+    ##h.write(stars2write)
+    ##h.close()
     h = open('paper/resultstable.dat', 'w')
-    h.write(str2write)
+    h.write(results2write)
     h.close()
