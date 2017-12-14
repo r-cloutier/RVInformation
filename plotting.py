@@ -6,8 +6,8 @@ from scipy.ndimage import gaussian_filter1d
 import matplotlib as mpl
 import matplotlib.colors as colors
 
-mpl.rc('xtick', labelsize=12)
-mpl.rc('ytick', labelsize=12)
+mpl.rc('xtick', labelsize=15)
+mpl.rc('ytick', labelsize=15)
 mpl.rc('axes', titlepad=3)
 
 global toverhead, Teffedges, Tefflabels, rpedges, rplabels, rplabels2
@@ -731,27 +731,56 @@ def plot_identifying_best_50(self, self_xarr, self_yarr,
     planets we can observe most efficiently.
     e.g. self_xarr = self.Vmags_med
     '''
-    g = (self.rps_med < 4)# & (self.spectrographs == 'N')
+    g = (self.rps_med < 4)# & (self.spectrographs == 'H')
     #tobss_med = np.mean([self.tobss_med_H, self.tobss_med_N], axis=0)
     tobss_med = self.tobss_med_N
     assert self_xarr.size == tobss_med.size
     assert self_yarr.size == tobss_med.size
+
+    # TEMP
+    self_xarr = self.Jmags_med
+    self_yarr = self.Ks_med
     
-    fig = plt.figure()
+    fig = plt.figure(figsize=(5.7,5.1))
     ax = fig.add_subplot(111)
     colmap = _truncate_colormap(plt.get_cmap('hot_r'),.1,1)
-    img = ax.scatter(self_xarr[g], self_yarr[g], c=np.log10(tobss_med[g]),
-                     cmap=plt.get_cmap(colmap), alpha=.5, s=s)
-    cbar_axes = fig.add_axes([.9, .1, .05, .8])
-    cbar = fig.colorbar(img, cax=cbar_axes)
+    '''img = ax.scatter(self_xarr[g], self_yarr[g], c=tobss_med[g],
+                     facecolors='none',
+                     cmap=plt.get_cmap('hot_r'), alpha=.5, s=s)#,
+                     #norm=colors.LogNorm(vmin=1, vmax=tobss_med[g].max()))'''
+    # set colorbar
+    img = ax.scatter(self_xarr[g], self_yarr[g], c=tobss_med[g],
+                     cmap=plt.get_cmap(colmap), s=0, 
+                     norm=colors.LogNorm(vmin=1,vmax=tobss_med[g].max()))
+    # add transluscent points
+    ax.scatter(self_xarr[g], self_yarr[g], c=tobss_med[g],
+               facecolors='none', cmap=plt.get_cmap(colmap), alpha=.5, s=s,
+               norm=colors.LogNorm(vmin=1,vmax=tobss_med[g].max()))
+    cbar_axes = fig.add_axes([.13, .1, .8, .04])
+    cbar = fig.colorbar(img, cax=cbar_axes, orientation='horizontal')
+    cbar.set_label('Total observing time per TOI [hours]', fontsize=12)
     
-    # Get 50*100 best
+    # Get 50 best
     sort = np.argsort(tobss_med[g])[:50]
     x, y = self_xarr[g][sort], self_yarr[g][sort]
     ax.scatter(x, y, facecolor='none', edgecolor='k', s=s)
 
+    # fill 'good' region
+    m, b = np.polyfit([7.8,11.35], [.72,3.2], 1)#.77067, -5.5#4.91587
+    line = lambda x: m*x + b
+    ax.fill_between([3.5,11.35], [line(3.5),line(11.35)], 30, color='k',
+                    alpha=.15)
+    ax.plot(np.repeat(11.35,2), [line(11.35),30], 'k--', lw=1.7)
+    ax.plot([3.5,11.35], [line(3.5),line(11.35)], 'k--', lw=1.7)
+    
     #ax.set_yscale('log')
+    ax.set_xlabel('V', fontsize=14, style='italic')
+    ax.set_ylabel('RV semi-amplitude [m s$^{-1}$]', fontsize=14)
+    ax.set_xlim((3.5,15)), ax.set_ylim((0,12))
 
+    fig.subplots_adjust(top=.97, bottom=.24, left=.11, right=.95)
+    if label:
+        plt.savefig('plots/identify50.png')
     if pltt:
         plt.show()
     plt.close('all')
