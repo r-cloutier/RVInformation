@@ -724,59 +724,52 @@ def _compute_curve_derivative(tobs, Ndet, sigma=5):
     return tobs2, dNdt
 
 
-def plot_identifying_best_50(self, self_xarr, self_yarr,
-                             s=3, pltt=True, label=False):
+def plot_identifying_best_50(self, s=20, pltt=True, label=False):
     '''
     Plot variables to try and guess which parameters best tell which small 
     planets we can observe most efficiently.
     e.g. self_xarr = self.Vmags_med
     '''
-    g = (self.rps_med < 4)# & (self.spectrographs == 'H')
+    g = (self.rps_med < 4)
     #tobss_med = np.mean([self.tobss_med_H, self.tobss_med_N], axis=0)
-    tobss_med = self.tobss_med_N
-    assert self_xarr.size == tobss_med.size
-    assert self_yarr.size == tobss_med.size
-
-    # TEMP
-    self_xarr = self.Jmags_med
-    self_yarr = self.Ks_med
     
     fig = plt.figure(figsize=(5.7,5.1))
-    ax = fig.add_subplot(111)
+    ax1 = fig.add_subplot(111)
     colmap = _truncate_colormap(plt.get_cmap('hot_r'),.1,1)
-    '''img = ax.scatter(self_xarr[g], self_yarr[g], c=tobss_med[g],
-                     facecolors='none',
-                     cmap=plt.get_cmap('hot_r'), alpha=.5, s=s)#,
-                     #norm=colors.LogNorm(vmin=1, vmax=tobss_med[g].max()))'''
+    '''img = ax1.scatter(self.Vmags_med[g], self_yarr[g], c=tobss_med[g],
+    facecolors='none',
+    cmap=plt.get_cmap('hot_r'), alpha=.5, s=s)#,
+    #norm=colors.LogNorm(vmin=1, vmax1=tobss_med[g].max1()))'''
     # set colorbar
-    img = ax.scatter(self_xarr[g], self_yarr[g], c=tobss_med[g],
-                     cmap=plt.get_cmap(colmap), s=0, 
-                     norm=colors.LogNorm(vmin=1,vmax=tobss_med[g].max()))
+    img = ax1.scatter(self.Vmags_med[g], self.Ks_med[g],
+                      c=self.tobss_med_H[g], cmap=plt.get_cmap(colmap), s=0, 
+                      norm=colors.LogNorm(vmin=1,
+                                          vmax1=self.tobss_med_H[g].max1()))
     # add transluscent points
-    ax.scatter(self_xarr[g], self_yarr[g], c=tobss_med[g],
+    ax1.scatter(self.Vmags_med[g], self.Ks_med[g], c=self.tobss_med_H[g],
                facecolors='none', cmap=plt.get_cmap(colmap), alpha=.5, s=s,
-               norm=colors.LogNorm(vmin=1,vmax=tobss_med[g].max()))
-    cbar_axes = fig.add_axes([.13, .1, .8, .04])
-    cbar = fig.colorbar(img, cax=cbar_axes, orientation='horizontal')
+               norm=colors.LogNorm(vmin=1,vmax1=tobss_med[g].max1()))
+    cbar_ax1es = fig.add_ax1es([.13, .1, .8, .04])
+    cbar = fig.colorbar(img, cax1=cbar_ax1es, orientation='horizontal')
     cbar.set_label('Total observing time per TOI [hours]', fontsize=12)
     
     # Get 50 best
-    sort = np.argsort(tobss_med[g])[:50]
-    x, y = self_xarr[g][sort], self_yarr[g][sort]
-    ax.scatter(x, y, facecolor='none', edgecolor='k', s=s)
+    sort = np.argsort(self.tobss_med_H[g])[:50]
+    x, y = self.Vmags_med[g][sort], self.Ks_med[g][sort]
+    ax1.scatter(x, y, facecolor='none', edgecolor='k', s=s)
 
     # fill 'good' region
     m, b = np.polyfit([7.8,11.35], [.72,3.2], 1)#.77067, -5.5#4.91587
     line = lambda x: m*x + b
-    ax.fill_between([3.5,11.35], [line(3.5),line(11.35)], 30, color='k',
+    ax1.fill_between([3.5,11.35], [line(3.5),line(11.35)], 30, color='k',
                     alpha=.15)
-    ax.plot(np.repeat(11.35,2), [line(11.35),30], 'k--', lw=1.7)
-    ax.plot([3.5,11.35], [line(3.5),line(11.35)], 'k--', lw=1.7)
+    ax1.plot(np.repeat(11.35,2), [line(11.35),30], 'k--', lw=1.7)
+    ax1.plot([3.5,11.35], [line(3.5),line(11.35)], 'k--', lw=1.7)
     
-    #ax.set_yscale('log')
-    ax.set_xlabel('V', fontsize=14, style='italic')
-    ax.set_ylabel('RV semi-amplitude [m s$^{-1}$]', fontsize=14)
-    ax.set_xlim((3.5,15)), ax.set_ylim((0,12))
+    #ax1.set_yscale('log')
+    ax1.set_xlabel('V', fontsize=14, style='italic')
+    ax1.set_ylabel('RV semi-amplitude [m s$^{-1}$]', fontsize=14)
+    ax1.set_xlim((3.5,15)), ax1.set_ylim((0,12))
 
     fig.subplots_adjust(top=.97, bottom=.24, left=.11, right=.95)
     if label:
