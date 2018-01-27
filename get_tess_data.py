@@ -80,5 +80,5 @@ def plot_Fdist(label=False, pltt=True):
 
 if __name__ == '__main__':
     ra, dec, rp, per, S, K, Rs, Teff, Vmag, Imag, Jmag, Kmag, dist, dil, logsigV, snr, mult = get_TESS_data()
-    good = Teff <= 38e2
+    #good = Teff <= 38e2
     #plot_Fdist()

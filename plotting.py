@@ -1,5 +1,5 @@
 import numpy as np
-import pylab as plt
+import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from uncertainties import unumpy as unp
 from scipy.interpolate import interp1d
@@ -7,6 +7,13 @@ from scipy.ndimage import gaussian_filter1d
 import matplotlib as mpl
 import matplotlib.colors as colors
 from CVZ import *
+from get_tess_data import get_TESS_data
+from analysis import *
+
+#params = {'text.usetex': True, 
+#          'text.latex.preamble': [r'\usepackage{cmbright}',
+#                                  r'\usepackage{amsmath}']}
+#plt.rcParams.update(params)
 
 global colH, colN
 colH, colN = '#4444ff', '#a30000'
@@ -113,39 +120,56 @@ def plot_tobs_hists_v_rp(self, nbins=40, pltt=True, label=False):
     plt.close('all')
 
 
+# bad ones: WASP-19, XO-2, WASP-22
 def plot_Nrv_estimates(pltt=True, label=False):
     # Get real planet data
-    _,sigeffs, sigKs, Nrv_true, multflag = \
+    _,sigeffs, sigKs, Nrv_true, Ks, rednoiseflag = \
                                 np.genfromtxt('Nrv_tests/FASTtests.dat').T
-
+    detsig = Ks / sigKs
+    c = detsig
+    
     # Compute Nrv
     Nrv_calc = compute_Nrv(sigeffs, sigKs)
 
     # plotting
-    fig = plt.figure(figsize=(6,6))
+    fig = plt.figure(figsize=(3.8,4.5))
     ax = fig.add_subplot(111, aspect='equal')
-    g = np.isfinite(multflag)#multflag == 1
-    cax = ax.scatter(Nrv_true[g], Nrv_calc[g], edgecolors='none',
-                     c=np.log10(sigeffs[g]), marker='o', s=100)
-    cbar_axes = fig.add_axes([.1,.9,.87,.04])
+    g = rednoiseflag == 0
+    cax = ax.scatter(Nrv_true[g], Nrv_calc[g], edgecolors='none', marker='o',
+                     c=c[g], s=60, label='white activity model',
+                     norm=LogNorm(vmin=1, vmax=3e2),
+		     cmap=_truncate_colormap(plt.get_cmap('Blues'),.3,1))
+    cbar_axes = fig.add_axes([.08,.13,.84,.04])
     cbar = fig.colorbar(cax, cax=cbar_axes, orientation='horizontal')
-    cbar.set_label('log sigK')
+    cticklabels = ['']*22
+    cticklabels[0], cticklabels[9], cticklabels[18] = '1', '10', '100'
+    cbar.ax.set_xticklabels(cticklabels) 
+    cbar.set_label(r'K / $\sigma_K$', labelpad=.1)
+    g = rednoiseflag == 1
+    ax.scatter(Nrv_true[g], Nrv_calc[g], edgecolors='none', marker='d',
+               c=c[g], s=70, label='red activity model',
+               norm=LogNorm(vmin=1, vmax=3e2),
+	       cmap=_truncate_colormap(plt.get_cmap('Blues'),.3,1))
     
-    Nrvs = np.append(Nrv_true, Nrv_calc)
     arr = np.linspace(0, 3e2, 100)
     ax.plot(arr, arr, 'k--', lw=2)
-    #ax.fill_between(arr, 3e2, arr, alpha=.3)
-    ax.fill_between(arr, .9*arr, 1.1*arr, alpha=.5)
-    ax.fill_between(arr, .8*arr, 1.2*arr, alpha=.5)
-    ax.plot(arr, 1.1*arr, 'k--', lw=.9)
-    ax.plot(arr, .9*arr, 'k--', lw=.9)
+    #for i in np.arange(.1,.5,.1):
+    #	ax.fill_between(arr, (1-i)*arr, (1+i)*arr, alpha=.5)
+    	#ax.plot(arr, (1+i)*arr, 'k--', lw=.6)
+    	#ax.plot(arr, (1-i)*arr, 'k--', lw=.6)
 
     ax.set_xscale('log'), ax.set_yscale('log')
-    ax.set_xlabel('Actual n$_{RV}$'), ax.set_ylabel('Calculated n$_{RV}$')
+    ax.set_xlabel('Observed n$_{RV}$'), ax.set_ylabel('Calculated n$_{RV}$')
     ax.set_xlim((1, 3e2)), ax.set_ylim((1, 3e2))
+    ax.set_xticks(np.logspace(0,2,3))
+    ax.set_xticklabels(['%i'%i for i in np.logspace(0,2,3)])
+    ax.set_yticks(np.logspace(0,2,3))
+    ax.set_yticklabels(['%i'%i for i in np.logspace(0,2,3)])
     ax.minorticks_on()
 
-    plt.subplots_adjust(bottom=.12)
+    ax.legend(bbox_to_anchor=(.62,.95), fontsize=9,
+              handletextpad=.01, labelspacing=.7)
+    fig.subplots_adjust(bottom=.27, left=.19, right=.97, top=1)
     if label:
         plt.savefig('plots/Nrvcomparison.png')
     if pltt:
@@ -283,7 +307,7 @@ def plot_NIRPSvSPIROU(self, pltt=True, label=False):
         plt.show()
     plt.close('all')
 
-
+# point estimates
 def plot_compare_tobs_H_N(self, pltt=True, label=False):
 
     h = self.spectrographs == 'H'
@@ -291,24 +315,29 @@ def plot_compare_tobs_H_N(self, pltt=True, label=False):
     ratio = unp.uarray(self.tobss_med_H / self.tobss_med_N,
                        self.tobss_emed_H / self.tobss_emed_N)
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(4.8,3.6))
     ax = fig.add_subplot(111)
 
     #ax.errorbar(self.Teffs_med, unp.nominal_values(ratio),
     #            unp.std_devs(ratio),
     #            fmt='ko', ms=1, elinewidth=.1)
+    # point estimates
     img = ax.scatter(self.Teffs_med, unp.nominal_values(ratio), s=2, alpha=1,
                      c='k')#self.Bmags_med-self.Vmags_med)
     #cbar_axes = fig.add_axes([.9, .1, .05, .8])
     #cbar = fig.colorbar(img, cax=cbar_axes)
-    ax.fill_between(ax.get_xlim(), 8.1, 1./8.1, color='k',
-                    alpha=.01)
+    #ax.fill_between(ax.get_xlim(), 8.1, 1./8.1, color='k',
+    #                alpha=.1)
+    ax.fill_between(ax.get_xlim(), 3, 1./3, color='k',
+                    alpha=.1)
 
     ax.set_yscale('log')
     ax.set_ylim((1e-2, 1e2)), ax.set_xlim((25e2, 12e3))
     ax.set_ylabel('median(t$_{obs,opt}$) / median(t$_{obs,nIR}$)')
     ax.set_xlabel('Effective Temperature [K]')
+    ax.minorticks_on()
 
+    fig.subplots_adjust(left=.17, bottom=.14, right=.93, top=.91)
     if label:
         plt.savefig('plots/optnIRratio.png')
     if pltt:
@@ -318,7 +347,7 @@ def plot_compare_tobs_H_N(self, pltt=True, label=False):
 
 def plot_cumulative_detections_v_tobs(self, pltt=True, label=False,
                                       harps=True, nirps=True, tmax=1e3,
-                                      observebesttargetsfirst=True):
+                                      xscale='linear'):
     #tarr = np.arange(0,tmax,1)
     fig = plt.figure(figsize=(9.5,4.6))
 
@@ -329,11 +358,10 @@ def plot_cumulative_detections_v_tobs(self, pltt=True, label=False,
 	if harps:
             g = (self.rps_med >= rpedges[i]) & \
                 (self.rps_med < rpedges[i+1])
-            tobs = np.sort(self.tobss_med_H[g]) if observebesttargetsfirst \
-                   else self.tobss_med_H[g]
+            tobs = np.sort(self.tobss_med_H[g])
 	    tobs = np.append(0, np.cumsum(tobs))
 	    Ndet = np.arange(tobs.size)
-	    g = tobs <= tmax
+	    g = tobs <= tmax+10
 	    ax1.plot(tobs[g], Ndet[g], '--', c=colH, lw=2, drawstyle='steps')
             # plot derivative
 	    if i == 0:
@@ -354,11 +382,10 @@ def plot_cumulative_detections_v_tobs(self, pltt=True, label=False,
         # NIRPS total observing time
 	if nirps:
             g = (self.rps_med >= rpedges[i]) & (self.rps_med < rpedges[i+1])
-            tobs = np.sort(self.tobss_med_N[g]) if observebesttargetsfirst \
-                   else self.tobss_med_N[g]
+            tobs = np.sort(self.tobss_med_N[g])
             tobs = np.append(0, np.cumsum(tobs))
             Ndet = np.arange(tobs.size)
-	    g = tobs <= tmax
+	    g = tobs <= tmax+10
             #_compute_curve_derivative(tobs[g], Ndet[g])
 	    ax1.plot(tobs[g], Ndet[g], '-', c=colN, drawstyle='steps')
 	    if i == 0:
@@ -371,8 +398,9 @@ def plot_cumulative_detections_v_tobs(self, pltt=True, label=False,
 
         ax1.set_title('%s\n%s'%(rplabels[i], rplabels2[i]), fontsize=10)
         ax2.set_xlabel('Cumulative observing\ntime [hours]', fontsize=9)
-        ax1.set_xticklabels('')
+        ax1.set_xscale(xscale), ax1.set_xticklabels('')
         ax1.minorticks_on(), ax2.minorticks_on()
+        ax2.set_xscale(xscale)
     	ax2.set_yscale('log'), ax2.set_ylim((1e-2,1.3))
     	ax1.set_xlim((0,tmax)), ax2.set_xlim((0,tmax))
 
@@ -686,7 +714,8 @@ def plot_cumulative_detections_v_Nrv_Teff(self, pltt=True, label=False,
 
 def plot_cumulative_detections_v_tobs_50_random(self, pltt=True, label=False,
                                                 Nrand=10, seed=0, pltflag=0,
-                                                sigma=3.):
+                                                sigma=3., tmax=1e5,
+                                                xscale='log'):
     '''0=all, 1=bkgd, 2=optical curves, 3=nIR curves''' 
     fig = plt.figure(figsize=(5.5,5.4))# 5.2
     gs = gridspec.GridSpec(10,1)
@@ -695,11 +724,12 @@ def plot_cumulative_detections_v_tobs_50_random(self, pltt=True, label=False,
     #ax1 = fig.add_subplot(211)
     #ax2 = fig.add_subplot(212)
     np.random.seed(int(seed))
+    corr = (.327/.189)**2 if sigma == 5 else 1
     g = self.rps_med < 4
     
     # HARPS total observing time
     if pltflag in [0,2]:
-        tobs = np.sort(self.tobss_med_H[g] * (sigma/3.)**2)
+        tobs = np.sort(self.tobss_med_H[g] * corr)
         tobs = np.append(0, np.cumsum(tobs))[:51]
         Ndet = np.arange(tobs.size)
         ax1.plot(tobs, Ndet, '--', c=colH, lw=2, drawstyle='steps')
@@ -710,7 +740,7 @@ def plot_cumulative_detections_v_tobs_50_random(self, pltt=True, label=False,
         ax2.plot(tobs2, dNdt, '--', c=colH, lw=2)
     if pltflag in [0,1]:
         threshold = 1./20  # detections / hour
-        ax2.plot([1,1e5], np.repeat(threshold,2), 'k--')
+        ax2.plot([1,tmax], np.repeat(threshold,2), 'k--')
         ax2.text(4, threshold*1.06,
                  '%i hours / detection'%(1./threshold),
                  verticalalignment='bottom', fontsize=9)
@@ -718,7 +748,7 @@ def plot_cumulative_detections_v_tobs_50_random(self, pltt=True, label=False,
         inds = np.arange(g.sum())
         for i in range(Nrand):
             np.random.shuffle(inds)
-            tobs = self.tobss_med_H[g][inds]  * (sigma/3.)**2
+            tobs = self.tobss_med_H[g][inds]  * corr
             tobs = np.append(0, np.cumsum(tobs))[:51]
             Ndet = np.arange(tobs.size)
             ax1.plot(tobs, Ndet, '--', c=colH, drawstyle='steps', lw=.3)
@@ -727,7 +757,7 @@ def plot_cumulative_detections_v_tobs_50_random(self, pltt=True, label=False,
 
     # NIRPS total observing time
     if pltflag in [0,3]:
-        tobs = np.sort(self.tobss_med_N[g] * (sigma/3.)**2)
+        tobs = np.sort(self.tobss_med_N[g] * corr)
         tobs = np.append(0, np.cumsum(tobs))[:51]
 	Ndet = np.arange(tobs.size)
 	ax1.plot(tobs, Ndet, '-', c=colN, drawstyle='steps')
@@ -739,18 +769,18 @@ def plot_cumulative_detections_v_tobs_50_random(self, pltt=True, label=False,
         inds = np.arange(g.sum())
         for i in range(Nrand):
             np.random.shuffle(inds)
-            tobs = self.tobss_med_N[g][inds]  * (sigma/3.)**2
+            tobs = self.tobss_med_N[g][inds]  * corr
             tobs = np.append(0, np.cumsum(tobs))[:51]
             Ndet = np.arange(tobs.size)
             ax1.plot(tobs, Ndet, '-', c=colN, drawstyle='steps', lw=.3)
             #tobs2, dNdt = _compute_curve_derivative(tobs, Ndet, 50)
             #ax2.plot(tobs2, dNdt, '-', c=colN, lw=.3)
 
-    ax1.set_xscale('log'), ax1.set_xlim((1,1e5))
+    ax1.set_xscale(xscale), ax1.set_xlim((1,tmax))
     ax1.set_ylim((0,50))
     ax1.set_xticklabels('')
     ax2.set_yscale('log'), ax2.set_ylim((3e-2,2))
-    ax2.set_xscale('log'), ax2.set_xlim((1,1e5))
+    ax2.set_xscale(xscale), ax2.set_xlim((1,tmax))
     ax1.minorticks_on()
     if pltflag in [0,1]:
         ax1.set_ylabel('Total number of\nplanet detections', fontsize=13)
@@ -812,11 +842,12 @@ def plot_cumulative_detections_v_Nrv_50_random(self, pltt=True, label=False,
     #ax1 = fig.add_subplot(211)
     #ax2 = fig.add_subplot(212)
     np.random.seed(int(seed))
+    corr = (.327/.189)**2 if sigma == 5 else 1
     g = self.rps_med < 4
     
     # HARPS total observing time
     if pltflag in [0,2]:
-        Nrvs = np.sort(self.Nrvs_med_H[g] * (sigma/3.)**2)
+        Nrvs = np.sort(self.Nrvs_med_H[g] * corr)
         Nrvs = np.append(0, np.cumsum(Nrvs))[:51]
         Ndet = np.arange(Nrvs.size)
         ax1.plot(Nrvs, Ndet, '--', c=colH, lw=2, drawstyle='steps')
@@ -835,7 +866,7 @@ def plot_cumulative_detections_v_Nrv_50_random(self, pltt=True, label=False,
         inds = np.arange(g.sum())
         for i in range(Nrand):
             np.random.shuffle(inds)
-            Nrvs = self.Nrvs_med_H[g][inds]  * (sigma/3.)**2
+            Nrvs = self.Nrvs_med_H[g][inds]  * corr
             Nrvs = np.append(0, np.cumsum(Nrvs))[:51]
             Ndet = np.arange(Nrvs.size)
             ax1.plot(Nrvs, Ndet, '--', c=colH, drawstyle='steps', lw=.3)
@@ -844,7 +875,7 @@ def plot_cumulative_detections_v_Nrv_50_random(self, pltt=True, label=False,
 
     # NIRPS total observing time
     if pltflag in [0,3]:
-        Nrvs = np.sort(self.Nrvs_med_N[g] * (sigma/3.)**2)
+        Nrvs = np.sort(self.Nrvs_med_N[g] * corr)
         Nrvs = np.append(0, np.cumsum(Nrvs))[:51]
 	Ndet = np.arange(Nrvs.size)
 	ax1.plot(Nrvs, Ndet, '-', c=colN, drawstyle='steps')
@@ -856,7 +887,7 @@ def plot_cumulative_detections_v_Nrv_50_random(self, pltt=True, label=False,
         inds = np.arange(g.sum())
         for i in range(Nrand):
             np.random.shuffle(inds)
-            Nrvs = self.Nrvs_med_N[g][inds]  * (sigma/3.)**2
+            Nrvs = self.Nrvs_med_N[g][inds]  * corr
             Nrvs = np.append(0, np.cumsum(Nrvs))[:51]
             Ndet = np.arange(Nrvs.size)
             ax1.plot(Nrvs, Ndet, '-', c=colN, drawstyle='steps', lw=.3)
@@ -922,19 +953,20 @@ def plot_cumulative_detections_v_Nrv_50_random(self, pltt=True, label=False,
     
 def plot_cumulative_detections_v_tobs_MR(self, pltt=True, label=False,
                                          tmax=1e6, Nrand=10, seed=0, pltflag=0,
-                                         sigma=5.):
-    '''0=all, 1=bkgd, 2=optical curves, 3=nIR curves, 4=threshold line''' 
+                                         xscale='log', sigma=5.):
+    '''0=all, 1=bkgd, 2=optical curves, 3=nIR curves, 4=threshold line'''
     fig = plt.figure(figsize=(5.5,5.4))# 5.2
     gs = gridspec.GridSpec(10,1)
     ax1 = plt.subplot(gs[:7,0])
     ax2 = plt.subplot(gs[7:,0])
     ax4 = fig.add_axes([.24, .6, .32, .32])
     np.random.seed(int(seed))
+    corr = (.327/.189)**2
     g = (self.rps_med >= 1.5) & (self.rps_med <= 2)
 
     # NIRPS total observing time
     if pltflag in [0,3]:
-        tobs = np.sort(self.tobss_med_N[g] * (sigma/3.)**2)
+        tobs = np.sort(self.tobss_med_N[g] * corr)
         tobs = np.append(0, np.cumsum(tobs))
 	Ndet = np.arange(tobs.size)
 	ax1.plot(tobs, Ndet, '-', c=colN, drawstyle='steps')
@@ -947,7 +979,7 @@ def plot_cumulative_detections_v_tobs_MR(self, pltt=True, label=False,
         inds = np.arange(g.sum())
         for i in range(Nrand):
             np.random.shuffle(inds)
-            tobs = self.tobss_med_N[g][inds] * (sigma/3.)**2
+            tobs = self.tobss_med_N[g][inds] * corr
             tobs = np.append(0, np.cumsum(tobs))
             Ndet = np.arange(tobs.size)
             ax1.plot(tobs, Ndet, '-', c=colN, drawstyle='steps', lw=.3)
@@ -957,7 +989,7 @@ def plot_cumulative_detections_v_tobs_MR(self, pltt=True, label=False,
 
     # HARPS total observing time
     if pltflag in [0,2]:
-        tobs = np.sort(self.tobss_med_H[g] * (sigma/3.)**2)
+        tobs = np.sort(self.tobss_med_H[g] * corr)
         tobs = np.append(0, np.cumsum(tobs))
         Ndet = np.arange(tobs.size)
         ax1.plot(tobs, Ndet, '--', c=colH, lw=2, drawstyle='steps')
@@ -978,7 +1010,7 @@ def plot_cumulative_detections_v_tobs_MR(self, pltt=True, label=False,
         inds = np.arange(g.sum())
         for i in range(Nrand):
             np.random.shuffle(inds)
-            tobs = self.tobss_med_H[g][inds] * (sigma/3.)**2
+            tobs = self.tobss_med_H[g][inds] * corr
             tobs = np.append(0, np.cumsum(tobs))
             Ndet = np.arange(tobs.size)
             ax1.plot(tobs, Ndet, '--', c=colH, drawstyle='steps', lw=.3)
@@ -986,12 +1018,15 @@ def plot_cumulative_detections_v_tobs_MR(self, pltt=True, label=False,
             #tobs2, dNdt = _compute_curve_derivative(tobs, Ndet, 50)
             #ax2.plot(tobs2, dNdt, '--', c=colH, lw=.3)
             
-    ax1.set_xscale('log'),
-    ax1.set_xlim((1,tmax)), ax1.set_ylim((0,400))
+    ax1.set_xscale(xscale)
+    ax1.set_xlim((1,tmax))
+    if xscale=='log':
+        ax1.set_ylim((0,400))
+    else:
+        ax1.set_ylim((0,60))
     ax1.set_xticklabels('')
     ax2.set_yscale('log'), ax2.set_ylim((1e-2,2))
-    ax2.set_xscale('log'),
-    ax2.set_xlim((1,tmax))
+    ax2.set_xscale(xscale), ax2.set_xlim((1,tmax))
     ax1.minorticks_on()
     ax4.set_xlim((0,1e3)), ax4.set_ylim((0,50))
     ax4.set_xticks(np.linspace(0,1e3,5))
@@ -1047,7 +1082,7 @@ def plot_cumulative_detections_v_tobs_MR(self, pltt=True, label=False,
 
 def plot_cumulative_detections_v_tobs_CVZ(self, pltt=True, label=False,
                                           Nrand=10, seed=0, pltflag=0,
-                                          sigma=3.):
+                                          tmax=2e5, sigmarho=3., xscale='log'):
     '''0=all, 1=bkgd, 2=optical curves, 3=nIR curves''' 
     fig = plt.figure(figsize=(5.5,5.4))# 5.2
     gs = gridspec.GridSpec(10,1)
@@ -1058,11 +1093,14 @@ def plot_cumulative_detections_v_tobs_CVZ(self, pltt=True, label=False,
     np.random.seed(int(seed))
     inCVZ = is_star_in_CVZ(self.ras_med, self.decs_med)
     g = inCVZ == 1
+
+    # get scaling to 3sigma density detection
+    scaling = _get_tobs_scaling(sigmarho, self.starnums_med, self.mps_med)
     
     # HARPS total observing time
     if pltflag in [0,2]:
-        tobs = np.sort(self.tobss_med_H[g])  * (sigma/3.)**2
-        tobs = np.append(0, np.cumsum(tobs))[:51]
+        tobs = np.sort(self.tobss_med_H[g] * scaling[g])
+        tobs = np.append(0, np.cumsum(tobs))
         Ndet = np.arange(tobs.size)
         ax1.plot(tobs, Ndet, '--', c=colH, lw=2, drawstyle='steps')
         ax2.text(.12, .28, 'Optical', color=colH, fontsize=11,
@@ -1072,7 +1110,7 @@ def plot_cumulative_detections_v_tobs_CVZ(self, pltt=True, label=False,
         ax2.plot(tobs2, dNdt, '--', c=colH, lw=2)
     if pltflag in [0,1]:
         threshold = 1./20  # detections / hour
-        ax2.plot([1,1e5], np.repeat(threshold,2), 'k--')
+        ax2.plot([1,tmax], np.repeat(threshold,2), 'k--')
         ax2.text(4e2, threshold*1.07,
                  '%i hours / detection'%(1./threshold),
                  verticalalignment='bottom', fontsize=9)
@@ -1080,8 +1118,8 @@ def plot_cumulative_detections_v_tobs_CVZ(self, pltt=True, label=False,
         inds = np.arange(g.sum())
         for i in range(Nrand):
             np.random.shuffle(inds)
-            tobs = self.tobss_med_H[g][inds] * (sigma/3.)**2
-            tobs = np.append(0, np.cumsum(tobs))[:51]
+            tobs = self.tobss_med_H[g][inds] * scaling[g][inds]
+            tobs = np.append(0, np.cumsum(tobs))
             Ndet = np.arange(tobs.size)
             ax1.plot(tobs, Ndet, '--', c=colH, drawstyle='steps', lw=.3)
             #tobs2, dNdt = _compute_curve_derivative(tobs, Ndet, 50)
@@ -1089,7 +1127,7 @@ def plot_cumulative_detections_v_tobs_CVZ(self, pltt=True, label=False,
 
     # NIRPS total observing time
     if pltflag in [0,3]:
-        tobs = np.sort(self.tobss_med_N[g]) * (sigma/3.)**2
+        tobs = np.sort(self.tobss_med_N[g] * scaling[g])
         tobs = np.append(0, np.cumsum(tobs))[:51]
 	Ndet = np.arange(tobs.size)
 	ax1.plot(tobs, Ndet, '-', c=colN, drawstyle='steps')
@@ -1101,18 +1139,18 @@ def plot_cumulative_detections_v_tobs_CVZ(self, pltt=True, label=False,
         inds = np.arange(g.sum())
         for i in range(Nrand):
             np.random.shuffle(inds)
-            tobs = self.tobss_med_N[g][inds] * (sigma/3.)**2
+            tobs = self.tobss_med_N[g][inds] * scaling[g][inds]
             tobs = np.append(0, np.cumsum(tobs))[:51]
             Ndet = np.arange(tobs.size)
             ax1.plot(tobs, Ndet, '-', c=colN, drawstyle='steps', lw=.3)
             #tobs2, dNdt = _compute_curve_derivative(tobs, Ndet, 50)
             #ax2.plot(tobs2, dNdt, '-', c=colN, lw=.3)
 
-    ax1.set_xscale('log'), ax1.set_xlim((1,2e4))
+    ax1.set_xscale(xscale), ax1.set_xlim((1,tmax))
     ax1.set_ylim((-1,inCVZ.sum()))    
     ax1.set_xticklabels('')
     ax2.set_yscale('log'), ax2.set_ylim((8e-4,.8))
-    ax2.set_xscale('log'), ax2.set_xlim((1,2e4))
+    ax2.set_xscale(xscale), ax2.set_xlim((1,tmax))
     ax1.minorticks_on(), ax2.minorticks_on()
     if pltflag in [0,1]:
         ax1.set_ylabel('Total number of\nplanet detections', fontsize=13)
@@ -1167,8 +1205,42 @@ def plot_cumulative_detections_v_tobs_CVZ(self, pltt=True, label=False,
     plt.close('all')
 
 
+def _get_tobs_scaling(sigmarho, starnums, mps, sigP=5e-5,
+                      fracsigMs=.1, fracsigRs=.1):
+    '''
+    Compute the scaling of tobs from a 3sig mass detection to a sigmarho 
+    density detection.
+    '''
+    g = np.argsort(starnums)
+    # Get rp uncertainty
+    _,_,rp,P,_,K,Rs,_,_,_,_,_,_,_,logsigV,_,_ = get_TESS_data()
+    depth    = compute_depth(rp, Rs)
+    Gamma    = compute_Gamma()
+    T        = compute_transit_duration(rp, P, K, Rs)
+    Q        = compute_Q(Gamma, T, depth, logsigV)
+    sigdepth = compute_sigdepth(depth, Q)
+    depth = unp.uarray(depth, sigdepth)
+    Rs2 = rvs.m2Rearth(rvs.Rsun2m(unp.uarray(Rs, fracsigRs*Rs)))
+    rp2 = unp.sqrt(depth)*Rs2
+    sigrp = unp.std_devs(rp2)
+
+    # Get mass uncertainty
+    fracsigrho = 1./sigmarho
+    sigmp = mps * np.sqrt(fracsigrho**2 - (3*sigrp[g]/rp[g])**2)
+    if not np.any(np.isfinite(sigmp)):
+        raise ValueError('Cannot measure the bulk density this precisely ' + \
+                         'for any TESS planet.')
+
+    # Get K uncertainty
+    fracsigK = np.sqrt((sigmp/mps)**2 - (sigP/(3*P[g]))**2 - (2*fracsigMs/3)**2)
+
+    # return scaling of tobs from 3sigma mass detection
+    return (.327 / fracsigK)**2
+    
+    
+
 def plot_cumulative_detections_v_tobs_HZ(self, pltt=True, label=False,
-                                         tmax=1e5, Nrand=10, seed=0, pltflag=0,
+                                         tmax=2e5, Nrand=10, seed=0, pltflag=0,
                                          sigma=5.):
     '''0=full, 1=background, 2=opt curves, 3=nir curves'''
     fig = plt.figure(figsize=(5.5,5.4))# 5.2
@@ -1177,11 +1249,12 @@ def plot_cumulative_detections_v_tobs_HZ(self, pltt=True, label=False,
     ax2 = plt.subplot(gs[7:,0])
     #ax4 = fig.add_axes([.24, .6, .32, .32])
     np.random.seed(int(seed))
+    corr = (.327/.189)**2 if sigma == 5 else 1
     g = (self.HZflags_med == 1) & (self.rps_med < 2)
 
     # NIRPS total observing time
     if pltflag in [0,3]:
-        tobs = np.sort(self.tobss_med_N[g] * (sigma/3.)**2)
+        tobs = np.sort(self.tobss_med_N[g] * corr)
         tobs = np.append(0, np.cumsum(tobs))
 	Ndet = np.arange(tobs.size)
 	ax1.plot(tobs, Ndet, '-', c=colN, drawstyle='steps')
@@ -1194,7 +1267,7 @@ def plot_cumulative_detections_v_tobs_HZ(self, pltt=True, label=False,
         inds = np.arange(g.sum())
         for i in range(Nrand):
             np.random.shuffle(inds)
-            tobs = self.tobss_med_N[g][inds] * (sigma/3.)**2
+            tobs = self.tobss_med_N[g][inds] * corr
             tobs = np.append(0, np.cumsum(tobs))
             Ndet = np.arange(tobs.size)
             ax1.plot(tobs, Ndet, '-', c=colN, drawstyle='steps', lw=.3)
@@ -1204,7 +1277,7 @@ def plot_cumulative_detections_v_tobs_HZ(self, pltt=True, label=False,
 
     # HARPS total observing time
     if pltflag in [0,2]:
-        tobs = np.sort(self.tobss_med_H[g] * (sigma/3.)**2)
+        tobs = np.sort(self.tobss_med_H[g] * corr)
         tobs = np.append(0, np.cumsum(tobs))
         Ndet = np.arange(tobs.size)
         ax1.plot(tobs, Ndet, '--', c=colH, lw=2, drawstyle='steps')
@@ -1225,7 +1298,7 @@ def plot_cumulative_detections_v_tobs_HZ(self, pltt=True, label=False,
         inds = np.arange(g.sum())
         for i in range(Nrand):
             np.random.shuffle(inds)
-            tobs = self.tobss_med_H[g][inds] * (sigma/3.)**2
+            tobs = self.tobss_med_H[g][inds] * corr
             tobs = np.append(0, np.cumsum(tobs))
             Ndet = np.arange(tobs.size)
             ax1.plot(tobs, Ndet, '--', c=colH, drawstyle='steps', lw=.3)
@@ -1307,109 +1380,128 @@ def _compute_curve_derivative(tobs, Ndet, sigma=5):
     return tobs2, dNdt
 
 
-def plot_identifying_best_50(self, s=20, pltt=True, label=False):
+def plot_identifying_best_50(self, s=10, pltt=True, label=False, pltflag=0):
     '''
     Plot variables to try and guess which parameters best tell which small 
     planets we can observe most efficiently.
     e.g. self_xarr = self.Vmags_med
+    0: full, 1:bkgd, 2:best, 3:regions
     '''
     g = (self.rps_med < 4)
     tobss_med = np.append(self.tobss_med_H[g], self.tobss_med_N[g])
     
     fig = plt.figure(figsize=(4,6.2))  # 5.7,5.1
     ax1 = fig.add_subplot(211)
-    colmap = _truncate_colormap(plt.get_cmap('hot_r'),.1,1)
+    ax2 = fig.add_subplot(212)
+    colmap = _truncate_colormap(plt.get_cmap('Blues'),.3,1)
     '''img = ax1.scatter(self.Vmags_med[g], self_yarr[g], c=tobss_med[g],
     facecolors='none',
     cmap=plt.get_cmap('hot_r'), alpha=.4, s=s)#,
     #norm=colors.LogNorm(vmin=1, vmax=tobss_med[g].max()))'''
     # set colorbar
-    img = ax1.scatter(self.Vmags_med[g], self.Ks_med[g],
-                      c=self.tobss_med_H[g], cmap=plt.get_cmap(colmap), s=0, 
-                      norm=colors.LogNorm(vmin=1, vmax=tobss_med.max()))
-    # add transluscent points
-    ax1.scatter(self.Vmags_med[g], self.Ks_med[g], c=self.tobss_med_H[g],
-               facecolors='none', cmap=plt.get_cmap(colmap), alpha=.4, s=s,
-               norm=colors.LogNorm(vmin=1,vmax=tobss_med.max()))
-    cbar_axes = fig.add_axes([.08, .08, .84, .033])
-    cbar = fig.colorbar(img, cax=cbar_axes, orientation='horizontal')
-    cbar.set_label('Total observing time per TOI [hours]', fontsize=12)
+    if pltflag in [0,1]:
+        img = ax1.scatter(self.Vmags_med[g], self.Ks_med[g],
+                          c=self.sigmaRV_eff_med_H[g], cmap=plt.get_cmap(colmap),
+                          s=0,
+                          norm=colors.LogNorm(vmin=1, vmax=tobss_med.max()))
+        # add transluscent points
+        ax1.scatter(self.Vmags_med[g], self.Ks_med[g], c=self.tobss_med_H[g],
+                    facecolors='none', cmap=plt.get_cmap(colmap), alpha=1, s=s,
+                    norm=colors.LogNorm(vmin=1,vmax=tobss_med.max()))
+        cbar_axes = fig.add_axes([.08, .08, .84, .032])
+        cbar = fig.colorbar(img, cax=cbar_axes, orientation='horizontal')
+        cbar.set_label('Total observing time per TOI [hours]', fontsize=12)
     
     # Get 50 best
-    sort = np.argsort(self.tobss_med_H[g])[:50]
-    x, y, c = self.Vmags_med[g], self.Ks_med[g], self.tobss_med_H[g]
-    ax1.scatter(x[sort], y[sort], facecolor='none', edgecolor='k', s=s)
-
-    # fill 'good' region
-    
+    if pltflag in [0,2]:
+        sort = np.argsort(self.tobss_med_H[g])[:50]
+        x, y, c = self.Vmags_med[g], self.Ks_med[g], self.tobss_med_H[g]
+        ax1.scatter(x[sort], y[sort], facecolor='none', edgecolor='k', s=s+2)
     
     # fill 'good' region
-    '''m, b = np.polyfit([7.8,11.35], [.72,3.2], 1)#.77067, -5.5#4.91587
-    line = lambda x: m*x + b
-    ax1.fill_between([3.5,11.35], [line(3.5),line(11.35)], 30, color='k',
-                     alpha=.15)
-    ax1.plot(np.repeat(11.35,2), [line(11.35),30], 'k--', lw=1.7)
-    ax1.plot([3.5,11.35], [line(3.5),line(11.35)], 'k--', lw=1.7)'''
+    if pltflag in [0,3]:
+        m, b = get_best_fraction(self.Vmags_med[g], self.Ks_med[g],
+                                 self.tobss_med_H[g])
+        print m, b
+        line = lambda x: m*x + b
+        ax1.fill_between([3.5,11.35], [line(3.5),line(11.35)], 30, color='k',
+                         alpha=.15)
+        ax1.plot(np.repeat(11.35,2), [line(11.35),30], 'k--', lw=1.7)
+        ax1.plot([3.5,11.35], [line(3.5),line(11.35)], 'k--', lw=1.7)
     
     ax1.set_xlabel('V', labelpad=1, fontsize=14, style='italic')
-    ax1.set_ylabel('RV semi-amplitude [m s$^{-1}$]', fontsize=14)
+    ax1.set_ylabel('RV semi-amplitude [m s$^{-1}$]', fontsize=12)
     ax1.set_xlim((3.5,20)), ax1.set_ylim((0,12))
     ax1.set_yticks(np.arange(0,13,3)), ax1.set_yticklabels(np.arange(0,13,3))
     ax1.minorticks_on()
 
     # Plot Jmag
-    ax2 = fig.add_subplot(212)
-    # set colorbar
-    ax2.scatter(self.Jmags_med[g], self.Ks_med[g],
-                c=self.tobss_med_N[g], cmap=plt.get_cmap(colmap), s=0, 
-                norm=colors.LogNorm(vmin=1, vmax=tobss_med.max()))
-    # add transluscent points
-    ax2.scatter(self.Jmags_med[g], self.Ks_med[g], c=self.tobss_med_N[g],
-               facecolors='none', cmap=plt.get_cmap(colmap), alpha=.4, s=s,
-               norm=colors.LogNorm(vmin=1,vmax=tobss_med.max()))
+    if pltflag in [0,1]:
+        # set colorbar
+        ax2.scatter(self.Jmags_med[g], self.Ks_med[g],
+                    c=self.sigmaRV_eff_med_N[g], cmap=plt.get_cmap(colmap), s=0, 
+                    norm=colors.LogNorm(vmin=1, vmax=tobss_med.max()))
+        # add transluscent points
+        ax2.scatter(self.Jmags_med[g], self.Ks_med[g], c=self.tobss_med_N[g],
+                    facecolors='none', cmap=plt.get_cmap(colmap), alpha=1, s=s,
+                    norm=colors.LogNorm(vmin=1,vmax=tobss_med.max()))
     
     # Get 50 best
-    sort = np.argsort(self.tobss_med_N[g])[:50]
-    x, y = self.Jmags_med[g][sort], self.Ks_med[g][sort]
-    ax2.scatter(x, y, facecolor='none', edgecolor='k', s=s)
+    if pltflag in [0,2]:
+        sort = np.argsort(self.tobss_med_N[g])[:50]
+        x, y = self.Jmags_med[g][sort], self.Ks_med[g][sort]
+        ax2.scatter(x, y, facecolor='none', edgecolor='k', s=s+2)
 
     # fill 'good' region
-    m, b = np.polyfit([7,10.1], [.7,3.1], 1)
-    line = lambda x: m*x + b
-    ax2.fill_between([3.5,10.1], [line(3.5),line(10.1)], 30, color='k',
-                     alpha=.15)
-    ax2.plot(np.repeat(10.1,2), [line(10.1),30], 'k--', lw=1.7)
-    ax2.plot([3.5,10.1], [line(3.5),line(10.1)], 'k--', lw=1.7)
+    if pltflag in [0,3]:
+        m, b = get_best_fraction(self.Jmags_med[g], self.Ks_med[g],
+                                 self.tobss_med_N[g])
+        print m, b
+        line = lambda x: m*x + b
+        ax2.fill_between([3.5,10.], [line(3.5),line(10.)], 30, color='k',
+                         alpha=.15)
+        ax2.plot(np.repeat(10,2), [line(10),30], 'k--', lw=1.7)
+        ax2.plot([3.5,10], [line(3.5),line(10)], 'k--', lw=1.7)
     
     ax2.set_xlabel('J', labelpad=1, fontsize=14, style='italic')
-    ax2.set_ylabel('RV semi-amplitude [m s$^{-1}$]', fontsize=14)
+    ax2.set_ylabel('RV semi-amplitude [m s$^{-1}$]', fontsize=12)
     ax2.set_xlim((3.5,15)), ax2.set_ylim((0,12))
     ax2.set_yticks(np.arange(0,13,3)), ax2.set_yticklabels(np.arange(0,13,3))
     ax2.minorticks_on()
-    
-    fig.subplots_adjust(top=.98, bottom=.19, left=.14, right=.95, hspace=.21)
+
+    if pltflag not in [0,1]:
+        ax1.axis('off')
+        ax2.axis('off')
+    fig.subplots_adjust(top=.98, bottom=.19, left=.15, right=.94, hspace=.21)
     if label:
-        plt.savefig('plots/identify50.png')
+        if pltflag == 0:
+            label = 'full'
+            transparent = False
+        elif pltflag == 1:
+            label = 'bkgd'
+            transparent = False
+        elif pltflag == 2:
+            label = 'best'
+            transparent = True
+        elif pltflag == 3:
+            label = 'region'
+            transparent = True
+        plt.savefig('plots/identify50_%s.png'%label, transparent=transparent)
     if pltt:
         plt.show()
     plt.close('all')
 
 
-def get_best_fraction(mags, Ks, tobss, maglim, dK, dmag):
-    sort = np.argsort(tobss)
+def get_best_fraction(mags, Ks, tobss):
+    sort = np.argsort(tobss)[:50]
     mags, Ks, tobss = mags[sort], Ks[sort], tobss[sort]
-    #bestflags = np.zeros(mags.size)
-    #bestflags[:50] = 1.
+    sort = Ks <= 12
+    mags, Ks, tobss = mags[sort], Ks[sort], tobss[sort]
+    m, b =  np.polyfit(mags, Ks, 1)
+    line = lambda x: m*x + b
+    g = Ks / line(mags) > 1
+    while g.sum() < Ks.size-5:
+        b -= 1e-2
+        g = Ks > line(mags)
+    return m, b
 
-    Kbins = np.arange(0, 4, dK)
-    bestfracs = np.zeros(Kbins.size-1)
-
-    for i in range(magbins.size-1):
-        g = (Ks >= Kbins[i]) & (Ks <= Kbins[i+1])
-        try:
-            #bestfracs[i] = tobss[g & (bestflags==1)].size / \
-            #               float(tobss[g & (bestflags==0)].size)
-            bestfracs[i] = np.median(tobss[g])
-        except ZeroDivisionError:
-            bestfracs[i] = np.nan
-    return magbins, bestfracs

@@ -1,59 +1,51 @@
-# name, sigmaRV_eff (m/s), sigmaK (m/s), Nrv_true, known multi-planet system?
-GJ1132	3.38	.92	25	0
-GJ1214	4.96	1.6	21	0
-LHS1140	5.24	1.1	144	0
-#ProxCen	1.14	.21	54	0
-#GJ3138	2.87	.28	198	1
-#GJ3323	2.85	.32	154	1
-#GJ273	2.75	.15	278	1
-#GJ628	2.72	.2	187	1
-#GJ3293	7.73	.32	207	1
-#YZCeti	3.36	.32	211	1
+# name, sigmaRV_eff (m/s), sigmaK (m/s), Nrv_true, K (m/s), red noise modelling?
+GJ1132	3.38	.92	25	2.76	0
+GJ1214	4.96	1.6	21	12.2	0
+LHS1140	5.24	1.1	144	5.34	1
 # http://adsabs.harvard.edu/abs/2015ApJ...800..135D  HARPS-N only
-Kep93	1.86	.27	86	1
+Kep93	1.86	.27	86	1.63	0
 # http://adsabs.harvard.edu/abs/2005A%26A...444L..15B
-H189733	15.	6.	12	0
+H189733	15.	6.	12	205.	0
 # http://adsabs.harvard.edu/abs/2017arXiv170704292C
-K2-18	4.56	.72	75	1
+# sigeff = sqrt(mean(erv)^2 + GP_amplitude^2)
+K2-18	4.58	.71	75	3.18	1
 # http://adsabs.harvard.edu/abs/2007ApJ...671.2115B
-XO-2N	20.1	8.	10	0
+XO-2N	20.1	8.	10	85.	0
 # http://adsabs.harvard.edu/abs/2014MNRAS.443.2517H
-CoRoT7	1.96	.68	71	1
+# sigeff = activity absorbed by the GP (see page 2528 in the text)
+CoRoT7	3.95	.66	71	3.1	1
 # http://adsabs.harvard.edu/abs/2011ApJ...730...10H
-H97658	2.78	.39	96	0
+H97658	2.78	.39	96	2.75	0
 # http://adsabs.harvard.edu/abs/2015ApJ...800...59V
-116454	2.01	.5	33	0
+116454	2.01	.5	33	4.41	0
 # http://adsabs.harvard.edu/abs/2016ApJ...819...83W
-Kep10	3.55	.34	220	1
+Kep10	3.55	.34	220	3.31	0
 # same paper as above but only hires data
-K10HIR	3.55	.59	72	1
+K10HIR	3.55	.59	72	3.31	0
 # http://adsabs.harvard.edu/abs/2013Natur.503..381H
-Kep78	2.6	.4	79	0
-# http://adsabs.harvard.edu/abs/1995Natur.378..355M
-#51Peg	13.	3.	35	0
+Kep78	2.6	.4	79	1.66	0
 # http://adsabs.harvard.edu/abs/2014ApJ...785..126K
-HATP4	10.2	3.	23	0
-HATP8	10.23	4.2	16	0
-HATP10	6.56	2.7	13	0
-HATP12	5.05	1.6	23	0
-HATP18	20.3	5.2	31	0
-HATP22	9.7	3.2	18	0
-HATP24	13.0	3.6	24	0
-HATP26	3.6	.98	26	0
-HATP29	11.2	4.6	11	0
-HATP33	66.	17.5	26	0
-H149026	6.18	1.4	42	0
-TRES2	18.1	5.7	19	0
-TRES4	16.9	10.	6	0
-WASP1	7.	3.2	10	0
-WASP3	17.6	5.9	15	0
-WASP4	3.25	2.3	5	0
-WASP16	2.62	1.6	4	0
-WASP18	8.77	6.2	6	0
-WASP19	17.8	3.4	3	0
-WASP22	7.7	1.6	11	0
-WASP24	4.62	3.2	4	0
-WASP34	3.6	1.7	8	0
-X02	9.8	2.2	9	0
-X05	11.2	3.	24	0
-
+HATP4	10.2	3.	23	10.	0
+HATP8	10.23	4.2	16	162.	0
+HATP10	6.56	2.7	13	75.7	0
+HATP12	5.05	1.6	23	35.4	0
+HATP18	20.3	5.2	31	25.4	0
+HATP22	9.7	3.2	18	314.4	0
+HATP24	13.0	3.6	24	86.5	0
+HATP26	3.6	.98	26	8.57	0
+HATP29	11.2	4.6	11	77.6	0
+HATP33	66.	17.5	26	72.	0
+H149026	6.18	1.4	42	37.9	0
+TRES2	18.1	5.7	19	180.1	0
+TRES4	16.9	10.	6	84.	0
+WASP1	7.	3.2	10	119.6	0
+WASP3	17.6	5.9	15	284.	0
+WASP4	3.25	2.3	5	234.5	0
+WASP16	2.62	1.6	4	118.9	0
+WASP18	8.77	6.2	6	1816.	0
+WASP19	20.35	5.0	34	256.	0
+#WASP22	7.2	1.6	11	70.9	0
+WASP24	4.62	3.2	4	152.	0
+WASP34	3.6	1.7	8	71.1	0
+X02	19.	8.0	10	85.0	0
+X05	11.2	3.	24	144.3	0

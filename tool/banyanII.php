@@ -39,6 +39,7 @@
 <!--				<li class="menuitem"><a href="https://www.researchgate.net/profile/Jonathan_Gagne/contributions/?ev=prf_act">J. Gagné's<br> ResearchGate Material</a></li> -->
             </ul>
         </div>
+	/NAME of
         
 
 		<div id="content">

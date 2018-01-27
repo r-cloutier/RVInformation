@@ -178,11 +178,11 @@ def _compute_sigrp(frac_sigRs=.1):
     rp, P, K, Rs, logsigV = np.ascontiguousarray(get_TESS_data())[inds]
 
     # Compute transit depth uncertainty
-    depth    = _compute_depth(rp, Rs)
-    Gamma    = _compute_Gamma()
-    T        = _compute_transit_duration(rp, P, K, Rs)
-    Q        = _compute_Q(Gamma, T, depth, logsigV)
-    sigdepth = _compute_sigdepth(depth, Q)
+    depth    = compute_depth(rp, Rs)
+    Gamma    = compute_Gamma()
+    T        = compute_transit_duration(rp, P, K, Rs)
+    Q        = compute_Q(Gamma, T, depth, logsigV)
+    sigdepth = compute_sigdepth(depth, Q)
 
     # compute corresponding planet radius uncertainty
     depth = unp.uarray(depth, sigdepth)
@@ -191,14 +191,14 @@ def _compute_sigrp(frac_sigRs=.1):
     return rp, unp.std_devs(rp2)
     
 
-def _compute_depth(rp, Rs):
+def compute_depth(rp, Rs):
     return (rvs.Rearth2m(rp) / rvs.Rsun2m(Rs))**2
 
-def _compute_Gamma():
+def compute_Gamma():
     cadence_minutes = 2.
     return 1./ (cadence_minutes / 60 / 24)   # days^-1
 
-def _compute_transit_duration(rp, P, K, Rs, b=0):
+def compute_transit_duration(rp, P, K, Rs, b=0):
     mp = np.array([runTESS.get_planet_mass(i) for i in rp])
     Ms = runTESS.get_stellar_mass(P, mp, K)
     sma = rvs.AU2m(rvs.semimajoraxis(P, Ms, mp))
@@ -206,11 +206,11 @@ def _compute_transit_duration(rp, P, K, Rs, b=0):
     tau0 = P * Rs2 / (2*np.pi*sma)
     return 2. * tau0 * np.sqrt(1. - b**2)
 
-def _compute_Q(Gamma, T, depth, logsig):
+def compute_Q(Gamma, T, depth, logsig):
     sig = 10**logsig
     return np.sqrt(Gamma * T) * depth / sig
 
-def _compute_sigdepth(depth, Q):
+def compute_sigdepth(depth, Q):
     return depth / Q
 
 
