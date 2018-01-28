@@ -5,22 +5,22 @@ from rvmodel import get_rv1
 sympy.init_printing()
 
 
-def get_timeseries():
-    tarr = np.random.rand(100) * 100
-    P, T0, K, sig = 10., 0., 3., 1.
-    rvarr = get_rv1((P,T0,0,K,0,0), tarr) + np.random.randn(tarr.size)*sig
-    ervarr = np.repeat(sig, tarr.size)
-    return tarr, rvarr, ervarr
+#def get_timeseries():
+#    tarr = np.random.rand(100) * 100
+#    P, T0, K, sig = 10., 0., 3., 1.
+#    rvarr = get_rv1((P,T0,0,K,0,0), tarr) + np.random.randn(tarr.size)*sig
+#    ervarr = np.repeat(sig, tarr.size)
+#    return tarr, rvarr, ervarr
 
 
 def compute_sigmaK_GP(theta, t_arr, rv_arr, erv_arr):
-    '''P, T0, Krv, a, l, G, Pgp = theta'''
+    '''P, T0, Krv, a, l, G, Pgp, s_jitter = theta'''
     B = _compute_Fisher_information_GP(theta, t_arr, rv_arr, erv_arr)
     return np.sqrt(np.diag(np.linalg.inv(B))[0])
 
 
 def _covariance_matrix(theta, t, sig=np.zeros(0)):
-    a, l, G, P = theta
+    a, l, G, P, s = theta
     t = t.reshape(t.size, 1)
     K = np.zeros ((t.size, t.size))
     K += -.5/l**2 * (np.tile(t[:,0], t.shape) - \
@@ -29,7 +29,7 @@ def _covariance_matrix(theta, t, sig=np.zeros(0)):
                                       np.tile(t[:,0], t.shape).T))**2
     K = a*a*np.exp(K)
     if sig.size == t.size:
-        return K + sig**2 * np.eye(t.size)
+        return K + (sig**2+s**2) * np.eye(t.size)
     else:
         return K
 
@@ -39,30 +39,32 @@ def _compute_Fisher_information_GP(theta, t_arr, rv_arr, erv_arr):
     circular keplerian RV model and a QP GP red noise model.
     theta = list of parameter values (P, T0, Krv, a, l, G, Pgp)
     '''
-    # get orbital phase array :)
-    assert len(theta) == 7
-    P, T0, Krv, a, l, G, Pgp = theta
+    # get orbital phase array
+    assert len(theta) == 8
+    P, T0, Krv, a, l, G, Pgp, s = theta
     sort = np.argsort(t_arr)
     t_arr, rv_arr, erv_arr = t_arr[sort], rv_arr[sort], erv_arr[sort]
     phase_arr = foldAt(t_arr, P, T0)
     thetavals = theta[2:]
     
     # define variables
-    Krv, a, l, G, P = sympy.symbols('Krv a lambda Gamma P')
-    symbol_vals = Krv, a, l, G, P
+    Krv, a, l, G, P, s = sympy.symbols('Krv a lambda Gamma P, s')
+    symbol_vals = Krv, a, l, G, P, s
     assert len(symbol_vals) == len(thetavals)
     
     # define time-series symbols
-    t, phi, rv, sig = sympy.symbols('t phi RV sigma')
+    t, phi, rv, sig, deltafunc = sympy.symbols('t phi RV sigma, delta')
     y = rv - (-Krv*sympy.sin(phi))
     
     # compute QP covariance function
-    k = a*a*sympy.exp(-.5*t**2 / l**2 - G*G*sympy.sin(np.pi*abs(t)/P)**2)
-    symbol_arrs = t, phi, rv, y, k
+    k = a*a*sympy.exp(-.5*t**2 / l**2 - G*G*sympy.sin(np.pi*abs(t)/P)**2) + \
+        deltafunc*(sig**2 * s**2)
+    symbol_arrs = t, phi, rv, sig, y, k, deltafunc
 
     # get arrays
     Kinv = np.linalg.inv(_covariance_matrix(theta[3:], t_arr, erv_arr))
-    thetaarrs = t_arr, phase_arr, rv_arr, Kinv
+    deltafunc_arr = np.ones(t_arr.size)
+    thetaarrs = t_arr, phase_arr, rv_arr, erv_arr, Kinv, deltafunc_arr
 
     # compute Fisher matrix
     Nparams = len(thetavals)
@@ -86,33 +88,41 @@ def _compute_Fisher_entry(symbol_i, symbol_j, symbol_values, symbol_arrays,
     symbol.
     '''
     # compute partial expressions
-    Krv_sym, a_sym, l_sym, G_sym, P_sym = symbol_values
-    t_sym, phi_sym, rv_sym, y_sym, K_sym = symbol_arrays
+    Krv_sym, a_sym, l_sym, G_sym, P_sym, s_sym = symbol_values
+    t_sym, phi_sym, rv_sym, erv_sym, y_sym, K_sym, deltafunc_sym = symbol_arrays
     dy_didj = sympy.lambdify([Krv_sym, phi_sym, rv_sym],
                              sympy.diff(y_sym, symbol_i, symbol_j), 'numpy')
     dy_di = sympy.lambdify([Krv_sym, phi_sym, rv_sym],
                            sympy.diff(y_sym, symbol_i), 'numpy')
     dy_dj = sympy.lambdify([Krv_sym, phi_sym, rv_sym],
                            sympy.diff(y_sym, symbol_j), 'numpy')
-    dK_didj = sympy.lambdify([a_sym, l_sym, G_sym, P_sym, t_sym],
+    dK_didj = sympy.lambdify([a_sym, l_sym, G_sym, P_sym, s_sym,
+                              deltafunc_sym, t_sym, erv_sym],
                              sympy.diff(K_sym, symbol_i, symbol_j), 'numpy')
-    dK_di = sympy.lambdify([a_sym, l_sym, G_sym, P_sym, t_sym],
+    dK_di = sympy.lambdify([a_sym, l_sym, G_sym, P_sym, s_sym,
+                            deltafunc_sym, t_sym, erv_sym],
                            sympy.diff(K_sym, symbol_i), 'numpy')
-    dK_dj = sympy.lambdify([a_sym, l_sym, G_sym, P_sym, t_sym],
+    dK_dj = sympy.lambdify([a_sym, l_sym, G_sym, P_sym, s_sym,
+                            deltafunc_sym, t_sym, erv_sym],
                            sympy.diff(K_sym, symbol_j), 'numpy')
     
     # evaluate partials at input values
-    K_val, a_val, l_val, G_val, P_val = thetavals
-    t_arr, phase_arr, rv_arr, Kinv =  thetaarrs
+    K_val, a_val, l_val, G_val, P_val, s_val = thetavals
+    t_arr, phase_arr, rv_arr, erv_arr, Kinv, deltafunc_arr =  thetaarrs
     N = t_arr.size
-    deltat_arr = np.tile(t_arr, (N,1)) - np.tile(t_arr, (N,1)).T    
+    deltat_mat = np.tile(t_arr, (N,1)) - np.tile(t_arr, (N,1)).T
+    deltafunc_mat = np.eye(N)
+    erv_mat = np.eye(N)*erv_arr
     y_arr = _intovector(rv_arr - _keplerian(K_val, phase_arr), N)
     dy_didj = _intovector(dy_didj(K_val, phase_arr, rv_arr), N)
     dy_di = _intovector(dy_di(K_val, phase_arr, rv_arr), N)
     dy_dj = _intovector(dy_dj(K_val, phase_arr, rv_arr), N)
-    dK_didj = _intomatrix(dK_didj(a_val, l_val, G_val, P_val, deltat_arr), N)
-    dK_di = _intomatrix(dK_di(a_val, l_val, G_val, P_val, deltat_arr), N)
-    dK_dj = _intomatrix(dK_dj(a_val, l_val, G_val, P_val, deltat_arr), N)
+    dK_didj = _intomatrix(dK_didj(a_val, l_val, G_val, P_val, s_val,
+                                  deltafunc_mat, deltat_mat, erv_mat), N)
+    dK_di = _intomatrix(dK_di(a_val, l_val, G_val, P_val, s_val,
+                              deltafunc_mat, deltat_mat, erv_mat), N)
+    dK_dj = _intomatrix(dK_dj(a_val, l_val, G_val, P_val, s_val,
+                              deltafunc_mat, deltat_mat, erv_mat), N)
 
     # get Fisher terms to sum
     terms = np.zeros(11)
@@ -145,8 +155,8 @@ def _keplerian(Krv, phase):
 
 def _intovector(x, size):
     '''
-    Input from partial derivatives may be a 1D vector or a scalar. Change dimensions
-    do future dot product calculations.
+    Input from partial derivatives may be a 1D vector or a scalar. Change 
+    dimensions to do future dot product calculations.
     '''
     if type(x) == int:  # x == 0
         return np.zeros((size, 1))
@@ -155,8 +165,8 @@ def _intovector(x, size):
     
 def _intomatrix(x, size):
     '''
-    Input from partial derivatives may be a 1D vector or a scalar. Change dimensions
-    do future dot product calculations.
+    Input from partial derivatives may be a 2D matrix or a scalar. Change
+    dimensions to do future dot product calculations.
     '''
     if type(x) == int:  # x == 0
         return np.zeros((size, size))
