@@ -5,18 +5,12 @@ from rvmodel import get_rv1
 sympy.init_printing()
 
 
-#def get_timeseries():
-#    tarr = np.random.rand(100) * 100
-#    P, T0, K, sig = 10., 0., 3., 1.
-#    rvarr = get_rv1((P,T0,0,K,0,0), tarr) + np.random.randn(tarr.size)*sig
-#    ervarr = np.repeat(sig, tarr.size)
-#    return tarr, rvarr, ervarr
-
-
 def compute_sigmaK_GP(theta, t_arr, rv_arr, erv_arr):
     '''P, T0, Krv, a, l, G, Pgp, s_jitter = theta'''
     B = _compute_Fisher_information_GP(theta, t_arr, rv_arr, erv_arr)
-    return np.sqrt(np.diag(np.linalg.inv(B))[0])
+    C = np.linalg.inv(B)
+    sigK = np.sqrt(np.diag(C)[0])
+    return sigK
 
 
 def _covariance_matrix(theta, t, sig=np.zeros(0)):
@@ -28,16 +22,14 @@ def _covariance_matrix(theta, t, sig=np.zeros(0)):
     K += -G**2 * np.sin(np.pi/P * abs(np.tile(t[:,0], t.shape) - \
                                       np.tile(t[:,0], t.shape).T))**2
     K = a*a*np.exp(K)
-    if sig.size == t.size:
-        return K + (sig**2+s**2) * np.eye(t.size)
-    else:
-        return K
+    s2 = s**2 + sig**2 if sig.size == t.size else s**2
+    return K + s2 * np.eye(t.size)
 
 
 def _compute_Fisher_information_GP(theta, t_arr, rv_arr, erv_arr):
-    '''Compute the Fisher information matrix with very complex terms for a 
-    circular keplerian RV model and a QP GP red noise model.
-    theta = list of parameter values (P, T0, Krv, a, l, G, Pgp)
+    '''Compute the Fisher information matrix term-by-term for a circular keplerian 
+    RV model and a QP GP red noise model.
+    theta = list of parameter values (P, T0, Krv, a, l, G, Pgp, s)
     '''
     # get orbital phase array
     assert len(theta) == 8
@@ -48,25 +40,24 @@ def _compute_Fisher_information_GP(theta, t_arr, rv_arr, erv_arr):
     thetavals = theta[2:]
     
     # define variables
-    Krv, a, l, G, P, s = sympy.symbols('Krv a lambda Gamma P, s')
+    Krv, a, l, G, P, s = sympy.symbols('Krv a lambda Gamma P s')
     symbol_vals = Krv, a, l, G, P, s
     assert len(symbol_vals) == len(thetavals)
     
     # define time-series symbols
-    t, phi, rv, sig, deltafunc = sympy.symbols('t phi RV sigma, delta')
-    y = rv - (-Krv*sympy.sin(phi))
-    
+    dt, phi, rv, erv = sympy.symbols('dt phi RV sigma')
+    y = rv - (-Krv*sympy.sin(phi))  # residual vector
+
     # compute QP covariance function
-    k = a*a*sympy.exp(-.5*t**2 / l**2 - G*G*sympy.sin(np.pi*abs(t)/P)**2) + \
-        deltafunc*(sig**2 * s**2)
-    symbol_arrs = t, phi, rv, sig, y, k, deltafunc
+    k = a*a*sympy.exp(-.5*dt**2 / l**2 - G*G*sympy.sin(np.pi*abs(dt)/P)**2) + \
+        (erv**2 * s**2)
+    symbol_arrs = dt, phi, rv, erv, y, k
 
     # get arrays
     Kinv = np.linalg.inv(_covariance_matrix(theta[3:], t_arr, erv_arr))
-    deltafunc_arr = np.ones(t_arr.size)
-    thetaarrs = t_arr, phase_arr, rv_arr, erv_arr, Kinv, deltafunc_arr
+    thetaarrs = t_arr, phase_arr, rv_arr, erv_arr, Kinv
 
-    # compute Fisher matrix
+    # compute the element-wise Fisher matrix 
     Nparams = len(thetavals)
     B = np.zeros((Nparams, Nparams))
     for i in range(Nparams):
@@ -89,7 +80,8 @@ def _compute_Fisher_entry(symbol_i, symbol_j, symbol_values, symbol_arrays,
     '''
     # compute partial expressions
     Krv_sym, a_sym, l_sym, G_sym, P_sym, s_sym = symbol_values
-    t_sym, phi_sym, rv_sym, erv_sym, y_sym, K_sym, deltafunc_sym = symbol_arrays
+    dt_sym, phi_sym, rv_sym, erv_sym, y_sym, K_sym = symbol_arrays
+    deltafunc_sym = sympy.symbol('delta')
     dy_didj = sympy.lambdify([Krv_sym, phi_sym, rv_sym],
                              sympy.diff(y_sym, symbol_i, symbol_j), 'numpy')
     dy_di = sympy.lambdify([Krv_sym, phi_sym, rv_sym],
@@ -97,18 +89,18 @@ def _compute_Fisher_entry(symbol_i, symbol_j, symbol_values, symbol_arrays,
     dy_dj = sympy.lambdify([Krv_sym, phi_sym, rv_sym],
                            sympy.diff(y_sym, symbol_j), 'numpy')
     dK_didj = sympy.lambdify([a_sym, l_sym, G_sym, P_sym, s_sym,
-                              deltafunc_sym, t_sym, erv_sym],
+                              deltafunc_sym, dt_sym, erv_sym],
                              sympy.diff(K_sym, symbol_i, symbol_j), 'numpy')
     dK_di = sympy.lambdify([a_sym, l_sym, G_sym, P_sym, s_sym,
-                            deltafunc_sym, t_sym, erv_sym],
+                            deltafunc_sym, dt_sym, erv_sym],
                            sympy.diff(K_sym, symbol_i), 'numpy')
     dK_dj = sympy.lambdify([a_sym, l_sym, G_sym, P_sym, s_sym,
-                            deltafunc_sym, t_sym, erv_sym],
+                            deltafunc_sym, dt_sym, erv_sym],
                            sympy.diff(K_sym, symbol_j), 'numpy')
-    
+
     # evaluate partials at input values
     K_val, a_val, l_val, G_val, P_val, s_val = thetavals
-    t_arr, phase_arr, rv_arr, erv_arr, Kinv, deltafunc_arr =  thetaarrs
+    t_arr, phase_arr, rv_arr, erv_arr, Kinv =  thetaarrs
     N = t_arr.size
     deltat_mat = np.tile(t_arr, (N,1)) - np.tile(t_arr, (N,1)).T
     deltafunc_mat = np.eye(N)
