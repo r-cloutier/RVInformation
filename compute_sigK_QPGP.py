@@ -36,6 +36,7 @@ def _compute_Fisher_information_GP(theta, t_arr, rv_arr, erv_arr):
     P, T0, Krv, a, l, G, Pgp, s = theta
     sort = np.argsort(t_arr)
     t_arr, rv_arr, erv_arr = t_arr[sort], rv_arr[sort], erv_arr[sort]
+    rv_arr -= np.median(rv_arr)  # roughly center on zero
     phase_arr = foldAt(t_arr, P, T0)
     thetavals = theta[2:]
     
@@ -81,7 +82,7 @@ def _compute_Fisher_entry(symbol_i, symbol_j, symbol_values, symbol_arrays,
     # compute partial expressions
     Krv_sym, a_sym, l_sym, G_sym, P_sym, s_sym = symbol_values
     dt_sym, phi_sym, rv_sym, erv_sym, y_sym, K_sym = symbol_arrays
-    deltafunc_sym = sympy.symbol('delta')
+    deltafunc_sym = sympy.symbols('delta')
     dy_didj = sympy.lambdify([Krv_sym, phi_sym, rv_sym],
                              sympy.diff(y_sym, symbol_i, symbol_j), 'numpy')
     dy_di = sympy.lambdify([Krv_sym, phi_sym, rv_sym],
