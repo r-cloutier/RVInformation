@@ -13,7 +13,7 @@ def compute_sigmaK_GP(theta, t_arr, rv_arr, erv_arr):
     return sigK
 
 
-def _covariance_matrix(theta, t, sig=np.zeros(0)):
+def _covariance_matrix(theta, t, sig=np.zeros(0)):  # this is working
     a, l, G, P, s = theta
     t = t.reshape(t.size, 1)
     K = np.zeros ((t.size, t.size))
@@ -51,7 +51,7 @@ def _compute_Fisher_information_GP(theta, t_arr, rv_arr, erv_arr):
 
     # compute QP covariance function
     k = a*a*sympy.exp(-.5*dt**2 / l**2 - G*G*sympy.sin(np.pi*abs(dt)/P)**2) + \
-        deltafunc * (erv**2 * s**2)
+        deltafunc * (erv**2 + s**2)
     symbol_arrs = dt, phi, rv, erv, y, k, deltafunc
 
     # get arrays
