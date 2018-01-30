@@ -33,7 +33,6 @@ def sigK_K218(N=1e3, P=32.93963, T0=2457264.39157):
     # Monte-Carlo computation of sigKs
     sigKs = np.zeros(N)
     for i in range(N):
-        print float(i) / N
         theta = P, T0, Krvs[i], As[i], ls[i], Gs[i], Ps[i], ss[i]
         sigKs[i] = compute_sigmaK_GP(theta, bjd, rv, erv)
 
@@ -59,7 +58,6 @@ def sigK_LHS1140(N=1e3, P=24.73712, T0=2456915.6997):
     # Monte-Carlo computation of sigKs
     sigKs = np.zeros(N)
     for i in range(N):
-        print float(i) / N
         theta = P, T0, Krvs[i], As[i], ls[i], Gs[i], Ps[i], ss[i]
         sigKs[i] = compute_sigmaK_GP(theta, bjd, rv, erv)
 
@@ -77,6 +75,7 @@ def sigK_Kep78(N=1e3, P=.35500744, T0=2454953.95995):
     N = int(N)
     Krvs = _random_normal_draws(1.86, .25, N, positive=True)
     As = _random_normal_draws(5.6, 1.7, N, positive=True)
+    ls = _random_normal_draws(26.1/np.sqrt(2), 15/np.sqrt(2), N, positive=True)
     Gs = _random_normal_draws(1/np.sqrt(2*.28**2), 1/np.sqrt(2*.28**2)/5.6,
                               N, positive=True)
     Ps = _random_normal_draws(13.26, .12, N, positive=True)
@@ -85,7 +84,6 @@ def sigK_Kep78(N=1e3, P=.35500744, T0=2454953.95995):
     # Monte-Carlo computation of sigKs
     sigKs = np.zeros(N)
     for i in range(N):
-        print float(i) / N
         theta = P, T0, Krvs[i], As[i], ls[i], Gs[i], Ps[i], ss[i]
         sigKs[i] = compute_sigmaK_GP(theta, bjd, rv, erv)
         sigKs[i] *= np.sqrt(109./193)  # correct for lack of HIRES RVs to compare to measured sigK = 0.25 m/s
@@ -112,7 +110,6 @@ def sigK_Kep21(N=1e3, P=2.78578, T0=2456798.7188):
     # Monte-Carlo computation of sigKs
     sigKs = np.zeros(N)
     for i in range(N):
-        print float(i) / N
         theta = P, T0, Krvs[i], As[i], ls[i], Gs[i], Ps[i], ss[i]
         sigKs[i] = compute_sigmaK_GP(theta, bjd, rv, erv)
 
@@ -138,7 +135,6 @@ def sigK_CoRoT7(N=1e3, P=.85359165, T0=2454398.0769):
     # Monte-Carlo computation of sigKs
     sigKs = np.zeros(N)
     for i in range(N):
-        print float(i) / N
         theta = P, T0, Krvs[i], As[i], ls[i], Gs[i], Ps[i], ss[i]
         sigKs[i] = compute_sigmaK_GP(theta, bjd, rv, erv)
 
@@ -192,10 +188,12 @@ def plot_sigK_hist(fname, sigKtarget=0, pltt=True, label=False):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.hist(sigKs, bins=np.logspace(np.log10(sigKs.min()),
-                                    np.log10(sigKs.max()),20))
+                                    np.log10(sigKs.max()),30))
     ax.set_xscale('log')
     if sigKtarget != 0:
         ax.axvline(sigKtarget, lw=.7)
+    v = np.percentile(sigKs, (16,84))
+    ax.fill_between(v, 0, ax.get_ylim()[1], alpha=.7, color='k')
     ax.set_xlabel('$\sigma_K$ (m/s)')
     if label:
         plt.savefig('plots/GPtestsigKhist_%s.png'%fname)
