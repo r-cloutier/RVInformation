@@ -24,7 +24,7 @@ def sigK_K218(N=1e3, P=32.93963, T0=2457264.39157):
     # sample parameter posteriors approximating the PDFs as Gaussian
     N = int(N)
     Krvs = _random_normal_draws(3.18, .71, N, positive=True)
-    As = _random_normal_draws(.669, 1.8, N, positive=True)
+    As = _random_normal_draws(.67, 1.8, N, positive=True)
     ls = _random_normal_draws(64.49, 15, N, positive=True)
     Gs = _random_normal_draws(1.2, .45, N, positive=True)
     Ps = _random_normal_draws(38.6, .9, N, positive=True)
@@ -174,7 +174,7 @@ def plot_correlations(fname, sigKtarget=0, pltt=True, label=False):
             ax.set_yticklabels('')
         if sigKtarget != 0:
             ax.axhline(sigKtarget, lw=.7)    
-    fig.subplots_adjust(bottom=.19, left=.06, right=.99, top=.96, wspace=.05)
+    fig.subplots_adjust(bottom=.19, left=.07, right=.99, top=.96, wspace=.05)
     if label:
         plt.savefig('plots/GPtestcorrelations_%s.png'%fname)
     if pltt:
