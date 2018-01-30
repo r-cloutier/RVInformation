@@ -10,6 +10,9 @@ from imports import *
 from compute_sigK_QPGP import compute_sigmaK_GP
 from rvmodel import get_rv1
 
+global fnames
+fnames = ['K218','LHS1140','Kep78HARPSN','Kep21HARPSN','CoRoT7']
+
 
 def sigK_K218(N=1e3, P=32.93963, T0=2457264.39157):
     '''From Cloutier et al 2017'''
@@ -74,7 +77,6 @@ def sigK_Kep78(N=1e3, P=.35500744, T0=2454953.95995):
     N = int(N)
     Krvs = _random_normal_draws(1.86, .25, N, positive=True)
     As = _random_normal_draws(5.6, 1.7, N, positive=True)
-    ls = _random_normal_draws(np.sqrt(2)*26.1, np.sqrt(2)*15, N, positive=True)
     Gs = _random_normal_draws(1/np.sqrt(2*.28**2), 1/np.sqrt(2*.28**2)/5.6,
                               N, positive=True)
     Ps = _random_normal_draws(13.26, .12, N, positive=True)
@@ -89,22 +91,23 @@ def sigK_Kep78(N=1e3, P=.35500744, T0=2454953.95995):
         sigKs[i] *= np.sqrt(109./193)  # correct for lack of HIRES RVs to compare to measured sigK = 0.25 m/s
 
     # save output
-    _save_draws('Kep78bHARPSN', Krvs, As, ls, Gs, Ps, ss, sigKs)
+    _save_draws('Kep78HARPSN', Krvs, As, ls, Gs, Ps, ss, sigKs)
 
 
 def sigK_Kep21(N=1e3, P=2.78578, T0=2456798.7188):
     '''From Lopez-Morales et al 2016'''
     # get time-series
-    bjd, rv, erv = np.loadtxt('Nrv_tests/Kepler21.dat').T
+    bjd, rv, erv = np.loadtxt('Nrv_tests/Kepler21_HARPSN.dat').T
     
     # sample parameter posteriors approximating the PDFs as Gaussian
     N = int(N)
-    Krvs = _random_normal_draws(, N, positive=True)
-    As = _random_normal_draws(, N, positive=True)
-    ls = _random_normal_draws(, N, positive=True)
-    Gs = _random_normal_draws(, N, positive=True)
-    Ps = _random_normal_draws(, N, positive=True)
-    ss = _random_normal_draws(, N, positive=True)
+    Krvs = _random_normal_draws(2.12, .66, N, positive=True)
+    As = _random_normal_draws(6.7, 1.4, N, positive=True)
+    ls = _random_normal_draws(np.sqrt(2)*24.04, np.sqrt(2)*.09,
+                              N, positive=True)
+    Gs = _random_normal_draws(1./.42, 1./.42*.12, N, positive=True)
+    Ps = _random_normal_draws(12.6, .02, N, positive=True)
+    ss = _random_normal_draws(.9, .1, N, positive=True)
 
     # Monte-Carlo computation of sigKs
     sigKs = np.zeros(N)
@@ -114,7 +117,33 @@ def sigK_Kep21(N=1e3, P=2.78578, T0=2456798.7188):
         sigKs[i] = compute_sigmaK_GP(theta, bjd, rv, erv)
 
     # save output
-    _save_draws('Kep21', Krvs, As, ls, Gs, Ps, ss, sigKs)
+    _save_draws('Kep21HARPSN', Krvs, As, ls, Gs, Ps, ss, sigKs)
+
+
+    
+def sigK_CoRoT7(N=1e3, P=.85359165, T0=2454398.0769):
+    '''From Haywood et al 2015'''
+    # get time-series
+    bjd, rv, erv = np.loadtxt('Nrv_tests/CoRoT7.dat').T
+    
+    # sample parameter posteriors approximating the PDFs as Gaussian
+    N = int(N)
+    Krvs = _random_normal_draws(3.42, .66, N, positive=True)
+    As = _random_normal_draws(7, 2, N, positive=True)
+    ls = _random_normal_draws(20.6, 2.5, N, positive=True)
+    Gs = _random_normal_draws(1, .1, N, positive=True)
+    Ps = _random_normal_draws(23.81, .03, N, positive=True)
+    ss = _random_normal_draws(0, 0, N, positive=True)
+
+    # Monte-Carlo computation of sigKs
+    sigKs = np.zeros(N)
+    for i in range(N):
+        print float(i) / N
+        theta = P, T0, Krvs[i], As[i], ls[i], Gs[i], Ps[i], ss[i]
+        sigKs[i] = compute_sigmaK_GP(theta, bjd, rv, erv)
+
+    # save output
+    _save_draws('CoRoT7', Krvs, As, ls, Gs, Ps, ss, sigKs)
 
     
 def _random_normal_draws(mu, sig, N, positive=False):
@@ -126,7 +155,7 @@ def _random_normal_draws(mu, sig, N, positive=False):
             draws = draws2[draws2 >= 0]
         draws = draws[:N]
     return draws
-                               
+
 
 def _save_draws(fname, Krvs, As, ls, Gs, Ps, ss, sigKs):
     outp = np.array([Krvs, As, ls, Gs, Ps, ss, sigKs]).T
