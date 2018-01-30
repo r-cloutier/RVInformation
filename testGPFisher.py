@@ -24,7 +24,7 @@ def sigK_K218(N=1e3, P=32.93963, T0=2457264.39157):
     # sample parameter posteriors approximating the PDFs as Gaussian
     N = int(N)
     Krvs = _random_normal_draws(3.18, .71, N, positive=True)
-    As = _random_normal_draws(.6269, 1.8, N, positive=True)
+    As = _random_normal_draws(.669, 1.8, N, positive=True)
     ls = _random_normal_draws(64.49, 15, N, positive=True)
     Gs = _random_normal_draws(1.2, .45, N, positive=True)
     Ps = _random_normal_draws(38.6, .9, N, positive=True)
