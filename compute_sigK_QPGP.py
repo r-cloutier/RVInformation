@@ -37,7 +37,7 @@ def _compute_Fisher_information_GP(theta, t_arr, rv_arr, erv_arr):
     sort = np.argsort(t_arr)
     t_arr, rv_arr, erv_arr = t_arr[sort], rv_arr[sort], erv_arr[sort]
     rv_arr -= np.median(rv_arr)  # roughly center on zero
-    phase_arr = foldAt(t_arr, P, T0)
+    phi_arr = 2*np.pi * foldAt(t_arr, P, T0)
     thetavals = theta[2:]
     
     # define variables
@@ -56,7 +56,7 @@ def _compute_Fisher_information_GP(theta, t_arr, rv_arr, erv_arr):
 
     # get arrays
     Kinv = np.linalg.inv(_covariance_matrix(theta[3:], t_arr, erv_arr))
-    thetaarrs = t_arr, phase_arr, rv_arr, erv_arr, Kinv
+    thetaarrs = t_arr, phi_arr, rv_arr, erv_arr, Kinv
 
     # compute the element-wise Fisher matrix 
     Nparams = len(thetavals)
@@ -76,8 +76,7 @@ def _compute_Fisher_entry(symbol_i, symbol_j, symbol_values, symbol_arrays,
                           thetavals, thetaarrs):
     '''
     Compute the Fisher information entry for one pair of model 
-    parameters. I.e. the partial of the lnlikelihood wrt to each 
-    symbol.
+    parameters. I.e. the partial of the lnlikelihood wrt to each symbol.
     '''
     # compute partial expressions
     Krv_sym, a_sym, l_sym, G_sym, P_sym, s_sym = symbol_values
@@ -100,14 +99,14 @@ def _compute_Fisher_entry(symbol_i, symbol_j, symbol_values, symbol_arrays,
 
     # evaluate partials at input values
     K_val, a_val, l_val, G_val, P_val, s_val = thetavals
-    t_arr, phase_arr, rv_arr, erv_arr, Kinv =  thetaarrs
+    t_arr, phi_arr, rv_arr, erv_arr, Kinv =  thetaarrs
     N = t_arr.size
     deltat_mat = np.tile(t_arr, (N,1)) - np.tile(t_arr, (N,1)).T
     deltafunc_mat = np.eye(N)
     erv_mat = np.eye(N)*erv_arr
-    dy_didj = _intovector(dy_didj(K_val, phase_arr, rv_arr), N)
-    dy_di = _intovector(dy_di(K_val, phase_arr, rv_arr), N)
-    dy_dj = _intovector(dy_dj(K_val, phase_arr, rv_arr), N)
+    dy_didj = _intovector(dy_didj(K_val, phi_arr, rv_arr), N)
+    dy_di = _intovector(dy_di(K_val, phi_arr, rv_arr), N)
+    dy_dj = _intovector(dy_dj(K_val, phi_arr, rv_arr), N)
     dK_didj = _intomatrix(dK_didj(a_val, l_val, G_val, P_val, s_val,
                                   deltafunc_mat, deltat_mat, erv_mat), N)
     dK_di = _intomatrix(dK_di(a_val, l_val, G_val, P_val, s_val,
@@ -116,7 +115,7 @@ def _compute_Fisher_entry(symbol_i, symbol_j, symbol_values, symbol_arrays,
                               deltafunc_mat, deltat_mat, erv_mat), N)
 
     # get Fisher terms to sum
-    y_arr = _intovector(rv_arr - (-K_val*np.sin(2*np.pi*phase_arr)), N)
+    y_arr = _intovector(rv_arr - (-K_val*np.sin(phi_arr)), N)
     terms = np.zeros(11)
     terms[0] = np.dot(dy_didj.T, np.dot(Kinv, y_arr))
     terms[1] = -np.dot(dy_di.T, np.dot(Kinv, np.dot(dK_dj, np.dot(Kinv, y_arr))))
