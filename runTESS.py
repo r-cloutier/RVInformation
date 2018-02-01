@@ -149,7 +149,7 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
 
     if verbose:
         print '\n%40s = %.3f m/s'%('Photon-noise limited RV uncertainty',
-                                   sigmaRV_phot)
+                                   sig_phot)
         print '%40s = %.3f m/s'%('Effective RV uncertainty', sig_eff)
         print '%40s = %.3f'%('Target fractional K uncertainty', sigK_target/K)
         print '%40s = %i'%('Number of RVs', Nrv)
@@ -295,9 +295,9 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
     Nrv = 2 * (sigmaRV_eff / sigmaK_target)**2
 
     # compute Nrv using a GP model instead of a white noise model
-    GPtheta = sig_activity, Prot*3, 2., Prot, sig_planets
+    GPtheta = sigmaRV_activity, Prot*3, 2., Prot, sigmaRV_planets
     keptheta = P, K
-    NrvGP = compute_nRV_GP(GPtheta, keptheta, sig_phot, sigmaK_target)
+    NrvGP = compute_nRV_GP(GPtheta, keptheta, sigmaRV_phot, sigmaK_target)
 
     # compute total observing time
     toverhead = 5.
@@ -522,7 +522,7 @@ def get_sigmaK_target_v2(K, fracsigmaK):
     return float(fracsigmaK * K)
 
 
-def get_sigmaK_target_v3(P, Ms, K, sigP=5e-5, fracsigMs=.1):
+def get_sigmaK_target_v3(P, Ms, K, sigP=0, fracsigMs=.1):
     '''
     Compute the K detection significance required to measure a planet's mass at 
     3 sigma.
@@ -555,7 +555,6 @@ def compute_nRV_GP(GPtheta, keptheta, sig_phot, sigK_target,
     Nrvs = np.arange(10, 1001, 90)
     sigKs = np.zeros(Nrvs.size)
     for i in range(Nrvs.size):
-        print i/float(Nrvs.size)
         # get rv activity model
         gp = george.GP(a*(george.kernels.ExpSquaredKernel(l) + \
                           george.kernels.ExpSine2Kernel(G,Pgp)))
@@ -585,6 +584,7 @@ def compute_nRV_GP(GPtheta, keptheta, sig_phot, sigK_target,
     ##Nrv1 = float(powerlawfunc(sigK_target, *popt))    
 
     # fit power in log space
+    g = np.isfinite(sigKs)
     p = np.poly1d(np.polyfit(np.log(sigKs[g]), np.log(Nrvs[g]), 1))
     Nrv = np.exp(p(np.log(sigK_target)))
     return Nrv
