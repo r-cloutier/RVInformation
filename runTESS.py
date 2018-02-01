@@ -8,8 +8,9 @@ from compute_sigmaRV import *
 from sigmaRV_activity import *
 from sigmaRV_planets import *
 import pylab as plt
-import glob, rvs, sys, os
+import glob, rvs, sys, os, george, rvmodel
 from uncertainties import unumpy as unp
+from compute_sigK_QPGP import compute_sigmaK_GP
 
 
 global G, rhoEarth, c, h
@@ -278,7 +279,7 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
         if sigmaRV_planets == 0 and testplanet_sigmaKfrac == 0 and mult > 1:
             sigmaRV_planets = get_sigmaRV_planets(P, rp, Teff_round, Ms, mult,
                                                   sigmaRV_phot)
-            
+
     # compute effective sigmaRV for the white noise model
     sigmaRV_eff = np.sqrt(sigmaRV_phot**2 + \
                           sigmaRV_activity**2 + \
@@ -291,8 +292,15 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
         sigmaK_target = get_sigmaK_target_v3(P, Ms, K)
     Nrv = 2 * (sigmaRV_eff / sigmaK_target)**2
 
+    # compute Nrv using a GP model instead of a white noise model
+    GPtheta = sig_activity, Prot*3, 2., Prot, sig_planets
+    keptheta = P, K
+    NrvGP = compute_nRV_GP(GPtheta, keptheta, sig_phot, sigmaK_target)
+
+    # compute total observing time
     toverhead = 5.
     tobserving = (texp+toverhead)*Nrv / 6e1
+    tobservingGP = (texp+toverhead)*NrvGP / 6e1
     
     return Nrv, texp, tobserving, sigmaK_target, sigmaRV_phot, sigmaRV_activity, sigmaRV_planets, sigmaRV_eff
 
@@ -527,7 +535,50 @@ def get_sigmaK_target_v3(P, Ms, K, sigP=5e-5, fracsigMs=.1):
     # Get where sigK returns a 3sigma mass detection
     fint = interp1d(detsig_mp, sigKs)
     return float(fint(3))
+
+
+def compute_nRV_GP(GPtheta, keptheta, sig_phot, sigKtarget,
+                   Nrvmax=100, duration=100):
+    '''
+    Compute nRV for TESS planets including a GP activity model (i.e. non-white 
+    noise model.
+    '''
+    assert len(GPtheta) == 5
+    assert len(keptheta) == 2
+    a, l, G, Pgp, s = GPtheta
+    P, K = keptheta
     
+    # search for target sigma by iterating over Nrv coarsely at first
+    Nrvmax = int(Nmax)
+    Nrvs = np.arange(Nrvmax, 0, -Nrvmax/10)
+    sigKs = np.zeros(Nrvs.size)
+    for i in range(Nrvs.size):
+        # get rv activity model
+        gp = george.GP(a*(george.kernels.ExpSquaredKernel(l) + \
+                          george.kernels.ExpSine2Kernel(G,Pgp)))
+        t = _uniform_window_function(duration, Nrvs[i])
+        erv = np.repeat(sig_phot, t.size)
+        gp.compute(t, np.sqrt(erv**2 + s**2))
+        rv_act = gp.sample(t)
+        rv_act *= a / rv_act.std()
+
+        # get planet model
+        rv_kep = rvmodel.get_rv1((P,0,0,K,0,0), t)
+
+        # get total rv signal with noise
+        rv = rv_act + rv_kep + np.random.randn(t.size) * sig_phot
+
+        # compute sigK
+        theta = P, 0, K, a, l, G, Pgp, s
+        sigKs[i] = compute_sigK_GP(theta, t, rv, erv)
+
+        
+        
+
+    
+def _uniform_window_function(duration, Nrv):
+    return np.linspace(0, duration, Nrv)
+
 
 def save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
                  Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, sigmaRV_planets,
