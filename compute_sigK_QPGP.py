@@ -1,6 +1,5 @@
-from imports import *
+import numpy as np
 import sympy
-from rvmodel import get_rv1
 
 sympy.init_printing()
 
