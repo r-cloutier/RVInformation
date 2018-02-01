@@ -11,7 +11,7 @@ import pylab as plt
 import glob, rvs, sys, os, george, rvmodel
 from uncertainties import unumpy as unp
 from compute_sigK_QPGP import compute_sigmaK_GP
-
+from scipy.optimize import curve_fit
 
 global G, rhoEarth, c, h
 G, rhoEarth, c, h = 6.67e-11, 5.51, 299792458., 6.62607004e-34
@@ -139,28 +139,30 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
                 Prot, B_V
     planettheta = rp, mp, K, P, mult
     instrumenttheta = band_strs, R, aperture_m, QE
-    Nrv,texp,tobs,sigK_target,sig_phot,sig_act,sig_planets,sig_eff = \
-                            estimate_Nrv(startheta, planettheta,
-                                         instrumenttheta, fname=fname,
-                                         sigmaRV_activity=sigmaRV_activity,
-                                         sigmaRV_planets=sigmaRV_planets,
-                                         sigmaRV_noisefloor=sigmaRV_noisefloor,
-                                    testplanet_sigmaKfrac=testplanet_sigmaKfrac)
+    Nrv,NrvGP,texp,tobs,tobsGP,sigK_target,sig_phot,sig_act,sig_planets,sig_eff = \
+                                        estimate_Nrv(startheta, planettheta,
+                                                     instrumenttheta, fname=fname,
+                                                     sigmaRV_activity=sigmaRV_activity,
+                                                     sigmaRV_planets=sigmaRV_planets,
+                                                     sigmaRV_noisefloor=sigmaRV_noisefloor,
+                                                     testplanet_sigmaKfrac=testplanet_sigmaKfrac)
 
     if verbose:
-        print '\n%35s = %.3f m/s'%('Photon-noise limited RV uncertainty',
+        print '\n%40s = %.3f m/s'%('Photon-noise limited RV uncertainty',
                                    sigmaRV_phot)
-        print '%35s = %.3f m/s'%('Effective RV uncertainty', sig_eff)
-        print '%35s = %.3f'%('Target fractional K uncertainty', sigK_target/K)
-        print '%35s = %i'%('Number of RVs', Nrv)
-        print '%35s = %.3f minutes'%('Exposure time', texp)
-        print '%35s = %.3f hours'%('Total observing time', tobs)
+        print '%40s = %.3f m/s'%('Effective RV uncertainty', sig_eff)
+        print '%40s = %.3f'%('Target fractional K uncertainty', sigK_target/K)
+        print '%40s = %i'%('Number of RVs', Nrv)
+        print '%40s = %i'%('Number of RVs (GP)', NrvGP)
+        print '%40s = %.3f minutes'%('Exposure time', texp)
+        print '%40s = %.3f hours'%('Total observing time', tobs)
+        print '%40s = %.3f hours'%('Total observing time (GP)', tobsGP)
 
     # Save values
     save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
                  Rs, Teff, dist, Prot, vsini, Z, sig_act,
                  sig_planets, R, aperture_m, QE, sigK_target/K,
-                 sig_phot, sig_eff, texp, tobs, Nrv, fname)
+                 sig_phot, sig_eff, texp, tobs, Nrv, tobsGP, NrvGP, fname)
 
 
 def estimate_Nrv(startheta, planettheta, instrumenttheta,
@@ -302,7 +304,8 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
     tobserving = (texp+toverhead)*Nrv / 6e1
     tobservingGP = (texp+toverhead)*NrvGP / 6e1
     
-    return Nrv, texp, tobserving, sigmaK_target, sigmaRV_phot, sigmaRV_activity, sigmaRV_planets, sigmaRV_eff
+    return Nrv, NrvGP, texp, tobserving, tobservingGP, \
+        sigmaK_target, sigmaRV_phot, sigmaRV_activity, sigmaRV_planets, sigmaRV_eff
 
  
 def _get_magnitudes(band_strs, known_mags, Teff, logg, Z, Ms):
@@ -537,8 +540,8 @@ def get_sigmaK_target_v3(P, Ms, K, sigP=5e-5, fracsigMs=.1):
     return float(fint(3))
 
 
-def compute_nRV_GP(GPtheta, keptheta, sig_phot, sigKtarget,
-                   Nrvmax=100, duration=100):
+def compute_nRV_GP(GPtheta, keptheta, sig_phot, sigK_target,
+                   duration=100):
     '''
     Compute nRV for TESS planets including a GP activity model (i.e. non-white 
     noise model.
@@ -549,10 +552,10 @@ def compute_nRV_GP(GPtheta, keptheta, sig_phot, sigKtarget,
     P, K = keptheta
     
     # search for target sigma by iterating over Nrv coarsely at first
-    Nrvmax = int(Nmax)
-    Nrvs = np.arange(Nrvmax, 0, -Nrvmax/10)
+    Nrvs = np.arange(10, 1001, 90)
     sigKs = np.zeros(Nrvs.size)
     for i in range(Nrvs.size):
+        print i/float(Nrvs.size)
         # get rv activity model
         gp = george.GP(a*(george.kernels.ExpSquaredKernel(l) + \
                           george.kernels.ExpSine2Kernel(G,Pgp)))
@@ -570,20 +573,37 @@ def compute_nRV_GP(GPtheta, keptheta, sig_phot, sigKtarget,
 
         # compute sigK
         theta = P, 0, K, a, l, G, Pgp, s
-        sigKs[i] = compute_sigK_GP(theta, t, rv, erv)
-
+        sigKs[i] = compute_sigmaK_GP(theta, t, rv, erv)
         
-        
+    # fit powerlaw to Nrv vs sigK
+    ##g = np.isfinite(sigKs)
+    ##alpha0 = np.polyfit(np.log10(sigKs[g]), np.log10(Nrvs[g]), 1)[0]
+    ##A0 = Nrvs.max() / sigKs[g].min()**alpha0
+    ##bounds = [-np.inf,-np.inf,0], [np.inf]*3 
+    ##popt,_ = curve_fit(powerlawfunc, sigKs[g], Nrvs[g], p0=[A0, alpha0, 0],
+    ##                   bounds=bounds)
+    ##Nrv1 = float(powerlawfunc(sigK_target, *popt))    
 
+    # fit power in log space
+    p = np.poly1d(np.polyfit(np.log(sigKs[g]), np.log(Nrvs[g]), 1))
+    Nrv = np.exp(p(np.log(sigK_target)))
+    return Nrv
+
+    
     
 def _uniform_window_function(duration, Nrv):
     return np.linspace(0, duration, Nrv)
 
 
+def powerlawfunc(xarr, A, alpha, c):
+    xarr = np.ascontiguousarray(xarr)
+    return A * xarr.astype('float')**alpha + c
+
+
 def save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
                  Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, sigmaRV_planets,
                  R, aperture_m, QE, fracsigmaK_target, sigmaRV_phot, sigmaRV_eff,
-                 texp, tobserving, Nrv, fname):
+                 texp, tobserving, Nrv, tobservingGP, NrvGP, fname):
     '''
     Write the stellar, planet, observatory parameters, and results to a text 
     file.
@@ -607,7 +627,7 @@ def save_results(planetindex, band_strs, mags, ra, dec, P, rp, mp, K, S, Ms,
          'Prot (days), vsini (km/s), Z ([Fe/H]), sigmaRV_act (m/s), ' + \
          'sigmaRV_planets (m/s), R (l/dl), aperture (m), QE, ' + \
          'fracsigmaK_target, sigmaRV_phot (m/s), sigmaRV_eff (m/s), texp (min), ' + \
-         'tobs_tot (hrs), Nrv\n'
-    g += '%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.2f\t%.2f\t%i\t%.3f\t%.3f\t%.3f\t%.1f\t%.3f\t%.3f\t%i\t%.2f\t%.2f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.1f\n'%(ra, dec, P, rp, mp, K, S, Ms, Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, sigmaRV_planets, R, aperture_m, QE, fracsigmaK_target, sigmaRV_phot, sigmaRV_eff, texp, tobserving, Nrv)
+         'tobs_tot (hrs), Nrv, tobs_tot_GP (hrs), NrvGP\n'
+    g += '%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.2f\t%.2f\t%i\t%.3f\t%.3f\t%.3f\t%.1f\t%.3f\t%.3f\t%i\t%.2f\t%.2f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.1f\t%.3f\t%.1f\n'%(ra, dec, P, rp, mp, K, S, Ms, Rs, Teff, dist, Prot, vsini, Z, sigmaRV_activity, sigmaRV_planets, R, aperture_m, QE, fracsigmaK_target, sigmaRV_phot, sigmaRV_eff, texp, tobserving, Nrv, tobservingGP, NrvGP)
     f.write(g)
     f.close()
