@@ -8,8 +8,9 @@ from compute_sigmaRV import *
 from sigmaRV_activity import *
 from sigmaRV_planets import *
 import pylab as plt
-import glob, rvs, sys, os, george, rvmodel
+import glob, rvs, sys, os, george
 from uncertainties import unumpy as unp
+from PyAstronomy.pyasl import foldAt
 from compute_sigK_QPGP import compute_sigmaK_GP
 from scipy.optimize import curve_fit
 
@@ -565,8 +566,8 @@ def compute_nRV_GP(GPtheta, keptheta, sig_phot, sigK_target,
         rv_act *= a / rv_act.std()
 
         # get planet model
-        rv_kep = rvmodel.get_rv1((P,0,0,K,0,0), t)
-
+        rv_kep = -K*np.sin(2*np.pi*foldAt(t, P))
+        
         # get total rv signal with noise
         rv = rv_act + rv_kep + np.random.randn(t.size) * sig_phot
 
