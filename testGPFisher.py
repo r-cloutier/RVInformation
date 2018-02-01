@@ -38,9 +38,9 @@ def sigK_K218(N=1e3, P=32.93963, T0=2457264.39157):
 
     # save output
     _save_draws('K218', Krvs, As, ls, Gs, Ps, ss, sigKs)
-    
 
-    
+
+
 def sigK_LHS1140(N=1e3, P=24.73712, T0=2456915.6997):
     '''From Dittmann et al 2017'''
     # get time-series
@@ -49,11 +49,11 @@ def sigK_LHS1140(N=1e3, P=24.73712, T0=2456915.6997):
     # sample parameter posteriors approximating the PDFs as Gaussian
     N = int(N)
     Krvs = _random_normal_draws(5.34, 1.1, N, positive=True)
-    As = _random_normal_draws(5, 5, N, positive=True)
+    As = _random_normal_draws(9, 5, N, positive=True)
     ls = _random_normal_draws(393/np.sqrt(2), 30/np.sqrt(2), N, positive=True)
-    Gs = _random_normal_draws(2., .2, N, positive=True)
-    Ps = _random_normal_draws(130, 5, N, positive=True)
-    ss = _random_normal_draws(2.7, .6, N, positive=True)
+    Gs = _random_normal_draws(2, .2, N, positive=True)
+    Ps = _random_normal_draws(134, 10, N, positive=True) # median of posterior
+    ss = _random_normal_draws(3, 1, N, positive=True)
 
     # Monte-Carlo computation of sigKs
     sigKs = np.zeros(N)
@@ -65,7 +65,7 @@ def sigK_LHS1140(N=1e3, P=24.73712, T0=2456915.6997):
     _save_draws('LHS1140', Krvs, As, ls, Gs, Ps, ss, sigKs)
 
 
-    
+
 def sigK_Kep78(N=1e3, P=.35500744, T0=2454953.95995):
     '''From Grunblatt et al 2015'''
     # get time-series
@@ -91,6 +91,7 @@ def sigK_Kep78(N=1e3, P=.35500744, T0=2454953.95995):
     # save output
     _save_draws('Kep78HARPSN', Krvs, As, ls, Gs, Ps, ss, sigKs)
 
+    
 
 def sigK_Kep21(N=1e3, P=2.78578, T0=2456798.7188):
     '''From Lopez-Morales et al 2016'''
@@ -101,11 +102,15 @@ def sigK_Kep21(N=1e3, P=2.78578, T0=2456798.7188):
     N = int(N)
     Krvs = _random_normal_draws(2.12, .66, N, positive=True)
     As = _random_normal_draws(6.7, 1.4, N, positive=True)
-    ls = _random_normal_draws(np.sqrt(2)*24.04, np.sqrt(2)*.09,
+    ls = _random_normal_draws(24.04/np.sqrt(2), .09/np.sqrt(2),
                               N, positive=True)
-    Gs = _random_normal_draws(1./.42, 1./.42*.12, N, positive=True)
+    Gs = _random_normal_draws(1/.42, .12/.42, N, positive=True)
     Ps = _random_normal_draws(12.6, .02, N, positive=True)
-    ss = _random_normal_draws(.9, .1, N, positive=True)
+    rmsinst, rmsgran = unp.uarray(.9, .1), unp.uarray(1.76, .04)
+    s = unp.sqrt(rmsinst**2 + rmsgran**2)
+    ss = _random_normal_draws(float(unp.nominal_values(s)), 
+			      float(unp.std_devs(s)), N, 
+			      positive=True)
 
     # Monte-Carlo computation of sigKs
     sigKs = np.zeros(N)
@@ -122,7 +127,9 @@ def sigK_CoRoT7(N=1e3, P=.85359165, T0=2454398.0769):
     '''From Haywood et al 2015'''
     # get time-series
     bjd, rv, erv = np.loadtxt('Nrv_tests/CoRoT7.dat').T
-    
+    kepc = get_rv1((3.7, 2455953.54, 0, 6.01, 0, 0), bjd)
+    rv -= kepc
+
     # sample parameter posteriors approximating the PDFs as Gaussian
     N = int(N)
     Krvs = _random_normal_draws(3.42, .66, N, positive=True)
@@ -130,7 +137,9 @@ def sigK_CoRoT7(N=1e3, P=.85359165, T0=2454398.0769):
     ls = _random_normal_draws(20.6, 2.5, N, positive=True)
     Gs = _random_normal_draws(1, .1, N, positive=True)
     Ps = _random_normal_draws(23.81, .03, N, positive=True)
-    ss = _random_normal_draws(0, 0, N, positive=True)
+    rmsRVrot, rmsRVconv, rmsRVtot = .46, 1.82, 3.92  # FF' contributions
+    ss = _random_normal_draws(np.sqrt(rmsRVtot**2 - rmsRVrot**2 - rmsRVconv**2), 
+			      0, N, positive=True)
 
     # Monte-Carlo computation of sigKs
     sigKs = np.zeros(N)
@@ -188,13 +197,18 @@ def plot_sigK_hist(fname, sigKtarget=0, pltt=True, label=False):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.hist(sigKs, bins=np.logspace(np.log10(sigKs.min()),
-                                    np.log10(sigKs.max()),30))
+                                    np.log10(sigKs.max()),30), alpha=.9)
     ax.set_xscale('log')
     if sigKtarget != 0:
-        ax.axvline(sigKtarget, lw=.7)
+        ax.axvline(sigKtarget, lw=1.1,
+                   label='Measured $\sigma_K$\n= %.2f m/s'%sigKtarget)
     v = np.percentile(sigKs, (16,84))
-    ax.fill_between(v, 0, ax.get_ylim()[1], alpha=.7, color='k')
+    ylim = ax.get_ylim()
+    ax.fill_between(v, ylim[0], ylim[1], alpha=.7, color='k')
     ax.set_xlabel('$\sigma_K$ (m/s)')
+    ax.set_ylim(ylim)
+    ax.legend(bbox_to_anchor=(.35, .8))
+    fig.subplots_adjust(bottom=.13)
     if label:
         plt.savefig('plots/GPtestsigKhist_%s.png'%fname)
     if pltt:

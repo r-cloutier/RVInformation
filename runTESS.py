@@ -279,7 +279,7 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
             sigmaRV_planets = get_sigmaRV_planets(P, rp, Teff_round, Ms, mult,
                                                   sigmaRV_phot)
             
-    # compute effective sigmaRV
+    # compute effective sigmaRV for the white noise model
     sigmaRV_eff = np.sqrt(sigmaRV_phot**2 + \
                           sigmaRV_activity**2 + \
                           sigmaRV_planets**2)

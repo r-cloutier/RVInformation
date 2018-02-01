@@ -8,12 +8,12 @@ Kep93	1.86	.27	86	1.63	0
 H189733	15.	6.	12	205.	0
 # http://adsabs.harvard.edu/abs/2017arXiv170704292C
 # sigeff = sqrt(mean(erv)^2 + GP_amplitude^2)
-K2-18	4.58	.71	75	3.18	1
+K2-18	3.7	.71	75	3.18	1
 # http://adsabs.harvard.edu/abs/2007ApJ...671.2115B
 XO-2N	20.1	8.	10	85.	0
 # http://adsabs.harvard.edu/abs/2014MNRAS.443.2517H
 # sigeff = activity absorbed by the GP (see page 2528 in the text)
-CoRoT7	3.95	.66	71	3.1	1
+CoRoT7	3.	.66	71	3.1	1
 # http://adsabs.harvard.edu/abs/2011ApJ...730...10H
 H97658	2.78	.39	96	2.75	0
 # http://adsabs.harvard.edu/abs/2015ApJ...800...59V

@@ -9,6 +9,8 @@ import matplotlib.colors as colors
 from CVZ import *
 from get_tess_data import get_TESS_data
 from analysis import *
+from rvmodel import get_rv1
+from compute_sigK_QPGP import compute_sigmaK_GP
 
 #params = {'text.usetex': True, 
 #          'text.latex.preamble': [r'\usepackage{cmbright}',
@@ -145,9 +147,28 @@ def plot_Nrv_estimates(pltt=True, label=False):
     cticklabels[0], cticklabels[9], cticklabels[18] = '1', '10', '100'
     cbar.ax.set_xticklabels(cticklabels) 
     cbar.set_label(r'K / $\sigma_K$', labelpad=.1)
-    g = rednoiseflag == 1
-    ax.scatter(Nrv_true[g], Nrv_calc[g], edgecolors='none', marker='d',
-               c=c[g], s=70, label='red activity model',
+    
+    #g = rednoiseflag == 1
+    #ax.scatter(Nrv_true[g], Nrv_calc[g], edgecolors='none', marker='d',
+    #           c=c[g], s=70, label='red activity model',
+    #           norm=LogNorm(vmin=1, vmax=3e2),
+    # 	       cmap=_truncate_colormap(plt.get_cmap('Blues'),.3,1))
+    names = ['K218','LHS1140','Kep78HARPSN','Kep21HARPSN','CoRoT7']
+    Ks = np.array([3.18, 5.34, 1.86, 2.12, 3.42])
+    sigKtargets, Nrvtargets = np.array([.75, 1.1, .25, .66, .66]), \
+                              np.array([75, 144, 109, 82, 71])
+    sigeffs = sigKtargets * np.sqrt(Nrvtargets/2.)
+    GPNrvs = np.zeros((sigeffs.size, 2))
+    for i in range(sigeffs.size):
+        sigKs = np.loadtxt('Nrv_tests/GPtest_%s.dat'%names[i])[:,-1]
+        sigKs = sigKs[np.isfinite(sigKs)]
+        Nrvs = 2 * (sigeffs[i] / sigKs)**2
+        GPNrvs[i] = np.median(Nrvs), MAD(Nrvs)
+        ax.text(Nrvtargets[i], GPNrvs[i,0]*.97, names[i], fontsize=6)
+    ax.errorbar(Nrvtargets, GPNrvs[:,0], GPNrvs[:,1], fmt='ko', ms=0,
+                elinewidth=.8, capsize=0)
+    ax.scatter(Nrvtargets, GPNrvs[:,0], edgecolors='none', marker='d',
+               c=Ks/sigKtargets, s=60, label='red activity model',
                norm=LogNorm(vmin=1, vmax=3e2),
 	       cmap=_truncate_colormap(plt.get_cmap('Blues'),.3,1))
     
@@ -1505,3 +1526,6 @@ def get_best_fraction(mags, Ks, tobss):
         g = Ks > line(mags)
     return m, b
 
+
+def MAD(xarr):
+    return np.median(abs(xarr - np.median(xarr)))
