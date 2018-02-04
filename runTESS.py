@@ -563,7 +563,8 @@ def compute_nRV_GP(GPtheta, keptheta, sig_phot, sigK_target,
         erv = np.repeat(sig_phot, t.size)
         gp.compute(t, np.sqrt(erv**2 + s**2))
         rv_act = gp.sample(t)
-        rv_act *= a / rv_act.std()
+        if rv_act.std() > 0:
+            rv_act *= a / rv_act.std()
 
         # get planet model
         rv_kep = -K*np.sin(2*np.pi*foldAt(t, P))

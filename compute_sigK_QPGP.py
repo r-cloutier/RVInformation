@@ -8,9 +8,11 @@ sympy.init_printing()
 def compute_sigmaK_GP(theta, t_arr, rv_arr, erv_arr):
     '''P, T0, Krv, a, l, G, Pgp, s_jitter = theta'''
     B = _compute_Fisher_information_GP(theta, t_arr, rv_arr, erv_arr)
-    C = np.linalg.inv(B)
-    sigK = np.sqrt(np.diag(C)[0])
-    return sigK
+    try:
+        C = np.linalg.inv(B)
+    except LinAlgError:
+        return np.nan
+    return np.sqrt(np.diag(C)[0])
 
 
 def _covariance_matrix(theta, t, sig=np.zeros(0)):  # this is working
