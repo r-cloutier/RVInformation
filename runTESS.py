@@ -273,15 +273,15 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
         sigmaRV_activity = np.loadtxt(fs[0])[14]
     else:
         if sigmaRV_activity == 0 and testplanet_sigmaKfrac == 0:
-            sigmaRV_activity = get_sigmaRV_activity(Teff_round, Ms, Prot, B_V)
+            sigmaRV_activity = abs(get_sigmaRV_activity(Teff_round, Ms, Prot, B_V))
         
     # estimate sigmaRV due to unseen planets
     if fs.size > 0:
         sigmaRV_planets = np.loadtxt(fs[0])[15]
     else:
         if sigmaRV_planets == 0 and testplanet_sigmaKfrac == 0 and mult > 1:
-            sigmaRV_planets = get_sigmaRV_planets(P, rp, Teff_round, Ms, mult,
-                                                  sigmaRV_phot)
+            sigmaRV_planets = abs(get_sigmaRV_planets(P, rp, Teff_round, Ms, mult,
+                                                      sigmaRV_phot))
 
     # compute effective sigmaRV for the white noise model
     sigmaRV_eff = np.sqrt(sigmaRV_phot**2 + \
@@ -298,7 +298,10 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
     # compute Nrv using a GP model instead of a white noise model
     GPtheta = sigmaRV_activity, Prot*3, 2., Prot, sigmaRV_planets
     keptheta = P, K
-    NrvGP = compute_nRV_GP(GPtheta, keptheta, sigmaRV_phot, sigmaK_target)
+    if sigmaRV_activity != 0:
+        NrvGP = compute_nRV_GP(GPtheta, keptheta, sigmaRV_phot, sigmaK_target)
+    else:
+        NrvGP = Nrv
 
     # compute total observing time
     toverhead = 5.
