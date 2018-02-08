@@ -34,9 +34,10 @@ class RVInformation:
         self.sigmaRV_planets = np.zeros(self.nfiles)
         self.sigmaRV_eff = np.zeros(self.nfiles)
         self.Rs, self.apertures = np.zeros(self.nfiles), np.zeros(self.nfiles)
-        self.QEs, self.texps = np.zeros(self.nfiles), np.zeros(self.nfiles)
+        self.throughputs, self.texps = np.zeros(self.nfiles), np.zeros(self.nfiles)
         self.fracsigmaK_targets = np.zeros(self.nfiles)
         self.tobss, self.Nrvs = np.zeros(self.nfiles), np.zeros(self.nfiles)
+        self.tobsGPs, self.NrvGPs = np.zeros(self.nfiles), np.zeros(self.nfiles)
 
         
     def _get_data(self):
@@ -48,7 +49,7 @@ class RVInformation:
         self.bands, self.mags = [], []
         for i in range(self.nfiles):
             # Get saved properties aside the magnitudes
-            self.ras[i], self.decs[i], self.Ps[i], self.rps[i], self.mps[i], self.Ks[i], self.Fs[i], self.Mss[i], self.Rss[i], self.Teffs[i], self.dists[i], self.Prots[i], self.vsinis[i], self.Zs[i], self.sigmaRV_acts[i], self.sigmaRV_planets[i], self.Rs[i], self.apertures[i], self.QEs[i], self.fracsigmaK_targets[i], self.sigmaRV_phot[i], self.sigmaRV_eff[i], self.texps[i], self.tobss[i], self.Nrvs[i] = np.loadtxt(self.files[i])
+            self.ras[i], self.decs[i], self.Ps[i], self.rps[i], self.mps[i], self.Ks[i], self.Fs[i], self.Mss[i], self.Rss[i], self.Teffs[i], self.dists[i], self.Prots[i], self.vsinis[i], self.Zs[i], self.sigmaRV_acts[i], self.sigmaRV_planets[i], self.Rs[i], self.apertures[i], self.throughputs[i], self.fracsigmaK_targets[i], self.sigmaRV_phot[i], self.sigmaRV_eff[i], self.texps[i], self.tobss[i], self.Nrvs[i], self.tobsGPs[i], self.NrvGPs[i] = np.loadtxt(self.files[i])
             self.starnums[i] = int(self.files[i].split('star')[-1].split('/')[0])
             self.systnums[i] = int(self.files[i].split('_')[-1].split('.')[0])
             
@@ -131,9 +132,10 @@ class RVInformation:
         self.sigmaRV_planets_med = np.zeros(self.nstars)
         self.sigmaRV_eff_med = np.zeros(self.nstars)
         self.Rs_med, self.apertures_med = np.zeros(self.nstars), np.zeros(self.nstars)
-        self.QEs_med, self.texps_med = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.throughputs_med, self.texps_med = np.zeros(self.nstars), np.zeros(self.nstars)
         self.fracsigmaK_targets_med = np.zeros(self.nstars)
         self.tobss_med, self.Nrvs_med = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.tobsGPs_med, self.NrvGPs_med = np.zeros(self.nstars), np.zeros(self.nstars)
         # Errors
         self.Prots_emed = np.zeros(self.nstars)
         self.vsinis_emed = np.zeros(self.nstars)
@@ -144,6 +146,7 @@ class RVInformation:
         self.texps_emed = np.zeros(self.nstars)
         self.fracsigmaK_targets_emed = np.zeros(self.nstars)
         self.tobss_emed, self.Nrvs_emed = np.zeros(self.nstars), np.zeros(self.nstars)
+        self.tobsGPs_emed, self.NrvGPs_emed = np.zeros(self.nstars), np.zeros(self.nstars)
 
 
     def _get_median_star_results(self):
@@ -179,13 +182,15 @@ class RVInformation:
             self.sigmaRV_planets_med[i] = np.median(self.sigmaRV_planets[g])
             self.Rs_med[i] = np.median(self.Rs[g])
             self.apertures_med[i] = np.median(self.apertures[g])
-            self.QEs_med[i] = np.median(self.QEs[g])
+            self.throughputs_med[i] = np.median(self.throughputs[g])
             self.fracsigmaK_targets_med[i] = np.median(self.fracsigmaK_targets[g])
             self.sigmaRV_phot_med[i] = np.median(self.sigmaRV_phot[g])
             self.sigmaRV_eff_med[i] = np.median(self.sigmaRV_eff[g])
             self.texps_med[i] = np.median(self.texps[g])
             self.tobss_med[i] = np.median(self.tobss[g])
             self.Nrvs_med[i] = np.median(self.Nrvs[g])
+            self.tobsGPs_med[i] = np.median(self.tobsGPs[g])
+            self.NrvGPs_med[i] = np.median(self.NrvGPs[g])
             # Errors
             self.Prots_emed[i] = MAD(self.Prots[g])
             self.vsinis_emed[i] = MAD(self.vsinis[g])
@@ -197,6 +202,8 @@ class RVInformation:
             self.texps_emed[i] = MAD(self.texps[g])
             self.tobss_emed[i] = MAD(self.tobss[g])
             self.Nrvs_emed[i] = MAD(self.Nrvs[g])
+            self.tobsGPs_emed[i] = MAD(self.tobsGPs[g])
+            self.NrvGPs_emed[i] = MAD(self.NrvGPs[g])
 
 
     def _initialize_median_arrays_per_spectrograph(self):
@@ -213,6 +220,8 @@ class RVInformation:
         self.fracsigmaK_targets_med_H = np.zeros(self.nstars)
         self.tobss_med_H = np.zeros(self.nstars)
         self.Nrvs_med_H = np.zeros(self.nstars)
+        self.tobsGPs_med_H = np.zeros(self.nstars)
+        self.NrvGPs_med_H = np.zeros(self.nstars)
         # Errors
         self.Prots_emed_H = np.zeros(self.nstars)
         self.vsinis_emed_H = np.zeros(self.nstars)
@@ -224,6 +233,8 @@ class RVInformation:
         self.fracsigmaK_targets_emed_H = np.zeros(self.nstars)
         self.tobss_emed_H = np.zeros(self.nstars)
         self.Nrvs_emed_H = np.zeros(self.nstars)
+        self.tobsGPs_emed_H = np.zeros(self.nstars)
+        self.NrvGPs_emed_H = np.zeros(self.nstars)
 
         # NIRPS spectrograph
         self.Prots_med_N = np.zeros(self.nstars)
@@ -238,6 +249,8 @@ class RVInformation:
         self.fracsigmaK_targets_med_N = np.zeros(self.nstars)
         self.tobss_med_N = np.zeros(self.nstars)
         self.Nrvs_med_N = np.zeros(self.nstars)
+        self.tobsGPs_med_N = np.zeros(self.nstars)
+        self.NrvGPs_med_N = np.zeros(self.nstars)
         # Errors
         self.Prots_emed_N = np.zeros(self.nstars)
         self.vsinis_emed_N = np.zeros(self.nstars)
@@ -249,6 +262,8 @@ class RVInformation:
         self.fracsigmaK_targets_emed_N = np.zeros(self.nstars)
         self.tobss_emed_N = np.zeros(self.nstars)
         self.Nrvs_emed_N = np.zeros(self.nstars)
+        self.tobsGPs_emed_N = np.zeros(self.nstars)
+        self.NrvGPs_emed_N = np.zeros(self.nstars)
 
         # SPIROU spectrograph
         self.Prots_med_S = np.zeros(self.nstars)
@@ -263,6 +278,8 @@ class RVInformation:
         self.fracsigmaK_targets_med_S = np.zeros(self.nstars)
         self.tobss_med_S = np.zeros(self.nstars)
         self.Nrvs_med_S = np.zeros(self.nstars)
+        self.tobsGPs_med_S = np.zeros(self.nstars)
+        self.NrvGPs_med_S = np.zeros(self.nstars)
         # Errors
         self.Prots_emed_S = np.zeros(self.nstars)
         self.vsinis_emed_S = np.zeros(self.nstars)
@@ -274,6 +291,8 @@ class RVInformation:
         self.fracsigmaK_targets_emed_S = np.zeros(self.nstars)
         self.tobss_emed_S = np.zeros(self.nstars)
         self.Nrvs_emed_S = np.zeros(self.nstars)
+        self.tobsGPs_emed_S = np.zeros(self.nstars)
+        self.NrvGPs_emed_S = np.zeros(self.nstars)
 
         
     def _get_median_star_results_per_spectrograph(self):
@@ -296,6 +315,8 @@ class RVInformation:
             self.texps_med_H[i] = np.median(self.texps[opt])
             self.tobss_med_H[i] = np.median(self.tobss[opt])
             self.Nrvs_med_H[i] = np.median(self.Nrvs[opt])
+            self.tobsGPs_med_H[i] = np.median(self.tobsGPs[opt])
+            self.NrvGPs_med_H[i] = np.median(self.NrvGPs[opt])
             # Errors
             self.Prots_emed_H[i] = MAD(self.Prots[opt])
             self.vsinis_emed_H[i] = MAD(self.vsinis[opt])
@@ -307,6 +328,8 @@ class RVInformation:
             self.texps_emed_H[i] = MAD(self.texps[opt])
             self.tobss_emed_H[i] = MAD(self.tobss[opt])
             self.Nrvs_emed_H[i] = MAD(self.Nrvs[opt])
+            self.tobsGPs_emed_H[i] = MAD(self.tobsGPs[opt])
+            self.NrvGPs_emed_H[i] = MAD(self.NrvGPs[opt])
 
             # NIRPS spectrograph
             nir = (self.starnums == self.starnums_med[i]) & \
@@ -321,6 +344,8 @@ class RVInformation:
             self.texps_med_N[i] = np.median(self.texps[nir])
             self.tobss_med_N[i] = np.median(self.tobss[nir])
             self.Nrvs_med_N[i] = np.median(self.Nrvs[nir])
+            self.tobsGPs_med_N[i] = np.median(self.tobsGPs[nir])
+            self.NrvGPs_med_N[i] = np.median(self.NrvGPs[nir])
             # Errors
             self.Prots_emed_N[i] = MAD(self.Prots[nir])
             self.vsinis_emed_N[i] = MAD(self.vsinis[nir])
@@ -332,6 +357,8 @@ class RVInformation:
             self.texps_emed_N[i] = MAD(self.texps[nir])
             self.tobss_emed_N[i] = MAD(self.tobss[nir])
             self.Nrvs_emed_N[i] = MAD(self.Nrvs[nir])
+            self.tobsGPs_emed_N[i] = MAD(self.tobsGPs[nir])
+            self.NrvGPs_emed_N[i] = MAD(self.NrvGPs[nir])
 
             # SPIROU spectrograph
             nir = (self.starnums == self.starnums_med[i]) & \
@@ -346,6 +373,8 @@ class RVInformation:
             self.texps_med_S[i] = np.median(self.texps[nir])
             self.tobss_med_S[i] = np.median(self.tobss[nir])
             self.Nrvs_med_S[i] = np.median(self.Nrvs[nir])
+            self.tobsGPs_med_S[i] = np.median(self.tobsGPs[nir])
+            self.NrvGPs_med_S[i] = np.median(self.NrvGPs[nir])
             # Errors
             self.Prots_emed_S[i] = MAD(self.Prots[nir])
             self.vsinis_emed_S[i] = MAD(self.vsinis[nir])
@@ -357,6 +386,8 @@ class RVInformation:
             self.texps_emed_S[i] = MAD(self.texps[nir])
             self.tobss_emed_S[i] = MAD(self.tobss[nir])
             self.Nrvs_emed_S[i] = MAD(self.Nrvs[nir])
+            self.tobsGPs_emed_S[i] = MAD(self.tobsGPs[nir])
+            self.NrvGPs_emed_S[i] = MAD(self.NrvGPs[nir])
 
             
     def _pickleobject(self):
