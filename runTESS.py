@@ -299,7 +299,7 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
     GPtheta = sigmaRV_activity, Prot*3, 2., Prot, sigmaRV_planets
     keptheta = P, K
     if sigmaRV_activity != 0:
-        NrvGP = compute_nRV_GP(GPtheta, keptheta, sigmaRV_phot, sigmaK_target)
+        NrvGP = compute_nRV_GP(GPtheta, keptheta, sigmaRV_phot, sigmaK_target, fname=fname)
     else:
         NrvGP = Nrv
 
@@ -545,7 +545,7 @@ def get_sigmaK_target_v3(P, Ms, K, sigP=0, fracsigMs=.1):
 
 
 def compute_nRV_GP(GPtheta, keptheta, sig_phot, sigK_target,
-                   duration=100):
+                   fname='', duration=100):
     '''
     Compute nRV for TESS planets including a GP activity model (i.e. non-white 
     noise model.
@@ -592,6 +592,20 @@ def compute_nRV_GP(GPtheta, keptheta, sig_phot, sigK_target,
     g = np.isfinite(sigKs)
     p = np.poly1d(np.polyfit(np.log(sigKs[g]), np.log(Nrvs[g]), 1))
     Nrv = np.exp(p(np.log(sigK_target)))
+    
+    # save diagnostic plot
+    if fname != '':
+ 	label = fname.split('/')[-1].split('.')[0]
+	starnum = label.split('_')[0].split('t')[-1]
+	try:
+	    os.mkdir('plots/star%s'%starnum)
+	except OSError:
+	    pass
+    	sigKs_temp = np.logspace(-3, 2, 100)
+    	plt.scatter(sigKs, Nrvs), plt.plot(sigKs_temp, np.exp(p(np.log(sigKs_temp))), '-')
+    	plt.xlabel('sigK (m/s)'), plt.ylabel('nRV'), plt.xscale('log'), plt.yscale('log')
+    	plt.savefig('plots/star%s/%s.png'%(starnum, label)), plt.close('all')
+
     return Nrv
 
     

@@ -11,9 +11,9 @@ def do_i_run_this_job(planetindex, band_strs, systnum):
 if __name__ == '__main__':
     planetindex = int(sys.argv[1])
     # HARPS, NIRPS, & SPIRou
-    band_strs = [['B','V'], ['Y','J','H'], ['Y','J','H','K']]
+    band_strs = [['B','V']]#, ['Y','J','H'], ['Y','J','H','K']]
     R, aperture_m, noisefloor = [1e5, 1e5, 7e4], [3.6, 3.6, 3.6], [.5, 1., 1.]
-    nsyst_per_TESSstar = 100
+    nsyst_per_TESSstar = 1
     assert nsyst_per_TESSstar > 0
 
     for i in range(nsyst_per_TESSstar):
