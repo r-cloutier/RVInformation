@@ -140,6 +140,14 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
                 Prot, B_V
     planettheta = rp, mp, K, P, mult
     instrumenttheta = band_strs, R, aperture_m, QE
+    print startheta
+    print planettheta
+    print instrumenttheta
+    print sigmaRV_activity
+    print sigmaRV_planets
+    print sigmaRV_noisefloor
+    print testplanet_sigmaKfrac
+    ##sys.exit('here')
     Nrv,NrvGP,texp,tobs,tobsGP,sigK_target,sig_phot,sig_act,sig_planets,sig_eff = \
                                         estimate_Nrv(startheta, planettheta,
                                                      instrumenttheta, fname=fname,
@@ -241,30 +249,6 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
     mags, band_strs = np.ascontiguousarray(mags), \
                       np.ascontiguousarray(band_strs)
     assert mags.size == band_strs.size
-    
-    # compute texp in a reference band (either V or J)
-    texp = exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
-                                             texpmin=texpmin, texpmax=texpmax)
-
-    # compute sigmaRV in each band for a fixed texp
-    sigmaRVs = np.zeros(mags.size)
-    for i in range(sigmaRVs.size):
-        wl, spec = get_reduced_spectrum(Teff_round, logg_round, Z, vsini,
-                                        band_strs[i], R, pltt=False)
-        sigmaRVs[i] = compute_sigmaRV(wl, spec, mags[i], band_strs[i], texp,
-                                      aperture_m, QE, R)
-
-    # Apply corrections from Artigau+2017 to bands with a known correction
-    correctionsYJHK = np.array([.47, .63, 1.59, 1.72])
-    sigmaRVs[band_strs == 'Y'] = sigmaRVs[band_strs == 'Y'] / correctionsYJHK[0]
-    sigmaRVs[band_strs == 'J'] = sigmaRVs[band_strs == 'J'] / correctionsYJHK[1]
-    sigmaRVs[band_strs == 'H'] = sigmaRVs[band_strs == 'H'] / correctionsYJHK[2]
-    sigmaRVs[band_strs == 'K'] = sigmaRVs[band_strs == 'K'] / correctionsYJHK[3]
-
-    # Compute sigmaRV over all bands
-    sigmaRV_phot = 1. / np.sqrt(np.sum(1./sigmaRVs**2))
-    sigmaRV_phot = sigmaRV_phot if sigmaRV_phot > sigmaRV_noisefloor \
-                   else float(sigmaRV_noisefloor)
 
     # estimate sigmaRV due to stellar activity
     fs = np.array(glob.glob('%s_*_%s'%(fname.split('_')[0],
@@ -274,6 +258,49 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
     else:
         if sigmaRV_activity == 0 and testplanet_sigmaKfrac == 0:
             sigmaRV_activity = abs(get_sigmaRV_activity(Teff_round, Ms, Prot, B_V))
+        
+    # compute texp in a reference band (either V or J) at a fixed S/N
+    SNRtarget = 50
+    texp = exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
+                                             SNRtarget, texpmin=texpmin,
+                                             texpmax=texpmax)
+
+    # compute sigmaRV in each band for a fixed texp
+    sigmaRVs = np.zeros(mags.size)
+    for i in range(mags.size):
+        wl, spec = get_reduced_spectrum(Teff_round, logg_round, Z, vsini,
+                                        band_strs[i], R, SNRtarget, pltt=False)
+        sigmaRVs[i] = compute_sigmaRV(wl, spec, mags[i], band_strs[i], texp,
+                                      aperture_m, QE, R, SNRtarget)
+
+    # Apply corrections from Artigau+2017 to bands with a known correction
+    correctionsYJHK = np.array([.47, .63, 1.59, 1.72])
+    sigmaRVs[band_strs == 'Y'] = sigmaRVs[band_strs == 'Y'] / correctionsYJHK[0]
+    sigmaRVs[band_strs == 'J'] = sigmaRVs[band_strs == 'J'] / correctionsYJHK[1]
+    sigmaRVs[band_strs == 'H'] = sigmaRVs[band_strs == 'H'] / correctionsYJHK[2]
+    sigmaRVs[band_strs == 'K'] = sigmaRVs[band_strs == 'K'] / correctionsYJHK[3]
+
+    # Compute photon-noise limited sigmaRV over all bands
+    sigmaRV_phot = 1. / np.sqrt(np.sum(1./sigmaRVs**2))
+    sigmaRV_phot = sigmaRV_phot if sigmaRV_phot > sigmaRV_noisefloor \
+                   else float(sigmaRV_noisefloor)
+
+    # reduce sigmaRV_phot
+    toadd = 1.
+    while ((sigmaRV_phot >= sigmaRV_activity) or (sigmaRV_phot >= K)) \
+          and (texp < texpmax):
+        sigmaRV_phot *= (SNRtarget / (SNRtarget+toadd))
+        texp = exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
+                                                 SNRtarget+toadd, texpmin=texpmin-1,
+                                                 texpmax=texpmax+1)
+        print 'SNRtarget = %.1f'%(SNRtarget+toadd)  # TEMP
+        print 'texp = %.3f min'%texp  # TEMP
+        print 'sigmaRV_phot = %.3f m/s'%sigmaRV_phot # TEMP
+        toadd += 1.
+
+    # adjust for large texp
+    if texp > texpmax:
+        sigmaRV_phot, texp = sigmaRV_phot*(SNRtarget+toadd-1) / SNRtarget, texpmax
         
     # estimate sigmaRV due to unseen planets
     if fs.size > 0:
@@ -299,7 +326,9 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
     GPtheta = sigmaRV_activity, Prot*3, 2., Prot, sigmaRV_planets
     keptheta = P, K
     if sigmaRV_activity != 0:
-        NrvGP = compute_nRV_GP(GPtheta, keptheta, sigmaRV_phot, sigmaK_target, fname=fname)
+        duration = 200 #Prot*3
+        NrvGP = compute_nRV_GP(GPtheta, keptheta, sigmaRV_phot, sigmaK_target,
+                               duration=duration, fname=fname)
     else:
         NrvGP = Nrv
 

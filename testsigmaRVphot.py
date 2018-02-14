@@ -70,7 +70,7 @@ def _get_band_spectra(band_strs, Teff_round, logg_round, Z=0., vsini=.1, R=7e4):
     
     for i in range(len(band_strs)):
         wl, spec = get_reduced_spectrum(Teff_round, logg_round, Z, vsini,
-                                        band_strs[i], R, pltt=False)
+                                        band_strs[i], R, SNRtarget, pltt=False)
         hdu = fits.HDUList()
         hdu.append(fits.ImageHDU(wl))
         hdu.append(fits.ImageHDU(spec))
@@ -123,7 +123,7 @@ def compute_texps(mags, band_strs, aperture_m, QE, R, Teff_round):
             g = np.arange(W_clean.size)
             sigmaRV = c / np.sqrt(np.sum(W_clean[g]))
             sigmaRVs[j] = rescale_sigmaRV(sigmaRV, mags[j], band_strs[j],
-                                          texps[i], aperture_m, QE, R)
+                                          texps[i], aperture_m, QE, R, SNRtarget)
             
         correctionsYJHK = np.array([.47, .63, 1.59, 1.72])
         sigmaRVs[band_strs == 'Y'] = sigmaRVs[band_strs == 'Y'] / \
