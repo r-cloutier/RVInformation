@@ -140,14 +140,6 @@ def estimate_Nrv_TESS(planetindex, band_strs, R, aperture_m,
                 Prot, B_V
     planettheta = rp, mp, K, P, mult
     instrumenttheta = band_strs, R, aperture_m, QE
-    print startheta
-    print planettheta
-    print instrumenttheta
-    print sigmaRV_activity
-    print sigmaRV_planets
-    print sigmaRV_noisefloor
-    print testplanet_sigmaKfrac
-    ##sys.exit('here')
     Nrv,NrvGP,texp,tobs,tobsGP,sigK_target,sig_phot,sig_act,sig_planets,sig_eff = \
                                         estimate_Nrv(startheta, planettheta,
                                                      instrumenttheta, fname=fname,
@@ -293,9 +285,6 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
         texp = exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
                                                  SNRtarget+toadd, texpmin=texpmin-1,
                                                  texpmax=texpmax+1)
-        print 'SNRtarget = %.1f'%(SNRtarget+toadd)  # TEMP
-        print 'texp = %.3f min'%texp  # TEMP
-        print 'sigmaRV_phot = %.3f m/s'%sigmaRV_phot # TEMP
         toadd += 1.
 
     # adjust for large texp
