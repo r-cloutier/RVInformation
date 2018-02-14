@@ -280,7 +280,7 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
     # reduce sigmaRV_phot
     toadd = 1.
     while ((sigmaRV_phot >= sigmaRV_activity) or (sigmaRV_phot >= K)) \
-          and (texp < texpmax):
+          and (texp < texpmax) and (texp > texpmin):
         sigmaRV_phot *= (SNRtarget / (SNRtarget+toadd))
         texp = exposure_time_calculator_per_band(mags, band_strs, aperture_m, QE, R,
                                                  SNRtarget+toadd, texpmin=texpmin-1,
@@ -289,7 +289,11 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
 
     # adjust for large texp
     if texp > texpmax:
-        sigmaRV_phot, texp = sigmaRV_phot*(SNRtarget+toadd-1) / SNRtarget, texpmax
+        sigmaRV_phot, texp = sigmaRV_phot*(SNRtarget+toadd-1) / SNRtarget, \
+                             texpmax
+    elif texp < texpmin:
+        sigmaRV_phot, texp = sigmaRV_phot*(SNRtarget+toadd-1) / SNRtarget, \
+                             texpmin      
         
     # estimate sigmaRV due to unseen planets
     if fs.size > 0:
