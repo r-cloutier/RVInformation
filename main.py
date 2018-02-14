@@ -16,8 +16,8 @@ if __name__ == '__main__':
     nsyst_per_TESSstar = 1
     assert nsyst_per_TESSstar > 0
 
-    for i in range(nsyst_per_TESSstar):
-        for j in range(len(band_strs)):
+    for j in range(len(band_strs)):
+    	for i in range(nsyst_per_TESSstar):
 
             testingseed = True if nsyst_per_TESSstar == 1 else False
             
