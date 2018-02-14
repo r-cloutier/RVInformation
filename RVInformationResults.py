@@ -48,39 +48,44 @@ class RVInformation:
 
         self.bands, self.mags = [], []
         for i in range(self.nfiles):
+            print self.files[i]
             # Get saved properties aside the magnitudes
-            self.ras[i], self.decs[i], self.Ps[i], self.rps[i], self.mps[i], self.Ks[i], self.Fs[i], self.Mss[i], self.Rss[i], self.Teffs[i], self.dists[i], self.Prots[i], self.vsinis[i], self.Zs[i], self.sigmaRV_acts[i], self.sigmaRV_planets[i], self.Rs[i], self.apertures[i], self.throughputs[i], self.fracsigmaK_targets[i], self.sigmaRV_phot[i], self.sigmaRV_eff[i], self.texps[i], self.tobss[i], self.Nrvs[i], self.tobsGPs[i], self.NrvGPs[i] = np.loadtxt(self.files[i])
-            self.starnums[i] = int(self.files[i].split('star')[-1].split('/')[0])
-            self.systnums[i] = int(self.files[i].split('_')[-1].split('.')[0])
+            try:
+                self.ras[i], self.decs[i], self.Ps[i], self.rps[i], self.mps[i], self.Ks[i], self.Fs[i], self.Mss[i], self.Rss[i], self.Teffs[i], self.dists[i], self.Prots[i], self.vsinis[i], self.Zs[i], self.sigmaRV_acts[i], self.sigmaRV_planets[i], self.Rs[i], self.apertures[i], self.throughputs[i], self.fracsigmaK_targets[i], self.sigmaRV_phot[i], self.sigmaRV_eff[i], self.texps[i], self.tobss[i], self.Nrvs[i], self.tobsGPs[i], self.NrvGPs[i] = np.loadtxt(self.files[i])
+                self.starnums[i] = int(self.files[i].split('star')[-1].split('/')[0])
+                self.systnums[i] = int(self.files[i].split('_')[-1].split('.')[0])
             
-            # Get bands and magnitudes
-            f = open(self.files[i], 'r')
-            g = f.readlines()
-            f.close()
-            bands, mags = [], []
-            for j in range(len(g)-2):
-                bands.append(g[j].split(' ')[1])
-                mags.append(float(g[j].split(' ')[3]))
-            self.bands.append(bands)
-            self.mags.append(mags)
+                # Get bands and magnitudes
+                f = open(self.files[i], 'r')
+                g = f.readlines()
+                f.close()
+                bands, mags = [], []
+                for j in range(len(g)-2):
+                    bands.append(g[j].split(' ')[1])
+                    mags.append(float(g[j].split(' ')[3]))
+                self.bands.append(bands)
+                self.mags.append(mags)
 
-            # get mags
-            if 'V' in self.bands[i]:
-                self.spectrographs[i] = 'H'
-                self.Bmags[i], self.Vmags[i] = self.mags[i]
+                # get mags
+                if 'V' in self.bands[i]:
+                    self.spectrographs[i] = 'H'
+                    self.Bmags[i], self.Vmags[i] = self.mags[i]
                 
-            elif 'K' in self.bands[i]:
-                self.spectrographs[i] = 'S'
-                self.Ymags[i], self.Jmags[i] = self.mags[i][0:2]
-                self.Hmags[i], self.Kmags[i] = self.mags[i][2:4]
+                elif 'K' in self.bands[i]:
+                    self.spectrographs[i] = 'S'
+                    self.Ymags[i], self.Jmags[i] = self.mags[i][0:2]
+                    self.Hmags[i], self.Kmags[i] = self.mags[i][2:4]
 
-            elif 'J' in self.bands[i]:
-                self.spectrographs[i] = 'N'
-                self.Ymags[i], self.Jmags[i], self.Hmags[i] = self.mags[i]
+                elif 'J' in self.bands[i]:
+                    self.spectrographs[i] = 'N'
+                    self.Ymags[i], self.Jmags[i], self.Hmags[i] = self.mags[i]
 
-            else:
-                raise ValueError("Spectra band do not contain a reference " + \
+                else:
+                    raise ValueError("Spectra band do not contain a reference " + \
                                  "band.")
+
+            except ValueError:
+                pass
 
         self._get_HZflags()
 
