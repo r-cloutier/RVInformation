@@ -601,7 +601,7 @@ def compute_nRV_GP(GPtheta, keptheta, sig_phot, sigK_target,
 	    os.mkdir('plots/star%s'%starnum)
 	except OSError:
 	    pass
-    	sigKs_temp = np.logspace(-3, 2, 100)
+    	sigKs_temp = np.logspace(np.log10(sigKs.min()), np.log10(sigKs.max()), 100)
     	plt.scatter(sigKs, Nrvs), plt.plot(sigKs_temp, np.exp(p(np.log(sigKs_temp))), '-')
     	plt.xlabel('sigK (m/s)'), plt.ylabel('nRV'), plt.xscale('log'), plt.yscale('log')
     	plt.savefig('plots/star%s/%s.png'%(starnum, label)), plt.close('all')
