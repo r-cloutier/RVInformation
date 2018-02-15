@@ -326,7 +326,7 @@ def estimate_Nrv(startheta, planettheta, instrumenttheta,
         NrvGP = Nrv
 
     # compute total observing time
-    toverhead = 5.
+    toverhead = 0.
     tobserving = (texp+toverhead)*Nrv / 6e1
     tobservingGP = (texp+toverhead)*NrvGP / 6e1
     

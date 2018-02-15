@@ -4,7 +4,7 @@ from uncertainties import unumpy as unp
 from get_tess_data import *
 
 global toverhead
-toverhead = 5.
+toverhead = 0.
 
 def _get_inds_of_complete_systems(self):
     starnums = np.unique(self.starnums)

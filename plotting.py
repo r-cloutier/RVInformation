@@ -25,7 +25,7 @@ mpl.rc('ytick', labelsize=13)
 mpl.rc('axes', titlepad=3)
 
 global toverhead, Teffedges, Tefflabels, rpedges, rplabels, rplabels2
-toverhead = 5.
+toverhead = 0.
 Teffedges = np.array([25e2, 32e2, 38e2, 76e2, 12e3])
 Tefflabels = ['mid-late M', 'early-mid M', 'FGK', 'BA']
 rpedges = np.array([0, 1.25, 2, 4, 30])
@@ -1414,19 +1414,15 @@ def plot_identifying_best_50(self, s=10, pltt=True, label=False, pltflag=0):
     fig = plt.figure(figsize=(4,6.2))  # 5.7,5.1
     ax1 = fig.add_subplot(211)
     ax2 = fig.add_subplot(212)
-    colmap = _truncate_colormap(plt.get_cmap('Blues'),.3,1)
-    '''img = ax1.scatter(self.Vmags_med[g], self_yarr[g], c=tobss_med[g],
-    facecolors='none',
-    cmap=plt.get_cmap('hot_r'), alpha=.4, s=s)#,
-    #norm=colors.LogNorm(vmin=1, vmax=tobss_med[g].max()))'''
+    colmap = _truncate_colormap(plt.get_cmap('jet'),0,1)
     # set colorbar
     if pltflag in [0,1]:
-        img = ax1.scatter(self.Vmags_med[g], self.Ks_med[g],
-                          c=self.sigmaRV_eff_med_H[g], cmap=plt.get_cmap(colmap),
-                          s=0,
+        img = ax1.scatter(self.Vmags_med[g], self.rps_med[g],
+                          c=self.tobss_med_H[g],
+                          cmap=plt.get_cmap(colmap), s=0,
                           norm=colors.LogNorm(vmin=1, vmax=tobss_med.max()))
         # add transluscent points
-        ax1.scatter(self.Vmags_med[g], self.Ks_med[g], c=self.tobss_med_H[g],
+        ax1.scatter(self.Vmags_med[g], self.rps_med[g], c=self.tobss_med_H[g],
                     facecolors='none', cmap=plt.get_cmap(colmap), alpha=1, s=s,
                     norm=colors.LogNorm(vmin=1,vmax=tobss_med.max()))
         cbar_axes = fig.add_axes([.08, .08, .84, .032])
@@ -1436,14 +1432,14 @@ def plot_identifying_best_50(self, s=10, pltt=True, label=False, pltflag=0):
     # Get 50 best
     if pltflag in [0,2]:
         sort = np.argsort(self.tobss_med_H[g])[:50]
-        x, y, c = self.Vmags_med[g], self.Ks_med[g], self.tobss_med_H[g]
+        x, y = self.Vmags_med[g], self.rps_med[g]
         ax1.scatter(x[sort], y[sort], facecolor='none', edgecolor='k', s=s+2)
     
     # fill 'good' region
     if pltflag in [0,3]:
-        m, b = get_best_fraction(self.Vmags_med[g], self.Ks_med[g],
+        m, b = get_best_fraction(self.Vmags_med[g], self.rps_med[g],
                                  self.tobss_med_H[g])
-        print m, b
+        print 'V slope and intercept: ', m, b
         line = lambda x: m*x + b
         ax1.fill_between([3.5,11.35], [line(3.5),line(11.35)], 30, color='k',
                          alpha=.15)
@@ -1451,31 +1447,32 @@ def plot_identifying_best_50(self, s=10, pltt=True, label=False, pltflag=0):
         ax1.plot([3.5,11.35], [line(3.5),line(11.35)], 'k--', lw=1.7)
     
     ax1.set_xlabel('V', labelpad=1, fontsize=14, style='italic')
-    ax1.set_ylabel('RV semi-amplitude [m s$^{-1}$]', fontsize=12)
-    ax1.set_xlim((3.5,20)), ax1.set_ylim((0,12))
-    ax1.set_yticks(np.arange(0,13,3)), ax1.set_yticklabels(np.arange(0,13,3))
+    ax1.set_ylabel('Planet radius [R$_{\oplus}$]', fontsize=12)
+    ax1.set_xlim((3.5,20)), ax1.set_ylim((0,4))
+    ax1.set_yticks(np.arange(0,5)), ax1.set_yticklabels(np.arange(0,5))
     ax1.minorticks_on()
 
     # Plot Jmag
     if pltflag in [0,1]:
         # set colorbar
-        ax2.scatter(self.Jmags_med[g], self.Ks_med[g],
-                    c=self.sigmaRV_eff_med_N[g], cmap=plt.get_cmap(colmap), s=0, 
+        ax2.scatter(self.Jmags_med[g], self.rps_med[g],
+                    c=self.tobss_med_N[g],
+                    cmap=plt.get_cmap(colmap), s=0, 
                     norm=colors.LogNorm(vmin=1, vmax=tobss_med.max()))
         # add transluscent points
-        ax2.scatter(self.Jmags_med[g], self.Ks_med[g], c=self.tobss_med_N[g],
+        ax2.scatter(self.Jmags_med[g], self.rps_med[g], c=self.tobss_med_N[g],
                     facecolors='none', cmap=plt.get_cmap(colmap), alpha=1, s=s,
                     norm=colors.LogNorm(vmin=1,vmax=tobss_med.max()))
     
     # Get 50 best
     if pltflag in [0,2]:
         sort = np.argsort(self.tobss_med_N[g])[:50]
-        x, y = self.Jmags_med[g][sort], self.Ks_med[g][sort]
-        ax2.scatter(x, y, facecolor='none', edgecolor='k', s=s+2)
+        x, y = self.Jmags_med[g], self.rps_med[g]
+        ax2.scatter(x[sort], y[sort], facecolor='none', edgecolor='k', s=s+2)
 
     # fill 'good' region
     if pltflag in [0,3]:
-        m, b = get_best_fraction(self.Jmags_med[g], self.Ks_med[g],
+        m, b = get_best_fraction(self.Jmags_med[g], self.rps_med[g],
                                  self.tobss_med_N[g])
         print m, b
         line = lambda x: m*x + b
@@ -1485,9 +1482,9 @@ def plot_identifying_best_50(self, s=10, pltt=True, label=False, pltflag=0):
         ax2.plot([3.5,10], [line(3.5),line(10)], 'k--', lw=1.7)
     
     ax2.set_xlabel('J', labelpad=1, fontsize=14, style='italic')
-    ax2.set_ylabel('RV semi-amplitude [m s$^{-1}$]', fontsize=12)
-    ax2.set_xlim((3.5,15)), ax2.set_ylim((0,12))
-    ax2.set_yticks(np.arange(0,13,3)), ax2.set_yticklabels(np.arange(0,13,3))
+    ax2.set_ylabel('Planet radius [R$_{\oplus}$]', fontsize=12)
+    ax2.set_xlim((3.5,15)), ax2.set_ylim((0,4))
+    ax2.set_yticks(np.arange(0,5)), ax2.set_yticklabels(np.arange(0,5))
     ax2.minorticks_on()
 
     if pltflag not in [0,1]:
