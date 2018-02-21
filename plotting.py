@@ -329,12 +329,15 @@ def plot_NIRPSvSPIROU(self, pltt=True, label=False):
     plt.close('all')
 
 # point estimates
-def plot_compare_tobs_H_N(self, pltt=True, label=False):
+def plot_compare_tobs_H_N(self, pltt=True, label=False, GP=False):
 
     h = self.spectrographs == 'H'
     n = self.spectrographs == 'N'
-    ratio = unp.uarray(self.tobss_med_H / self.tobss_med_N,
-                       self.tobss_emed_H / self.tobss_emed_N)
+    tobsH = self.tobsGPs_med_H if GP else self.tobss_med_H
+    etobsH = self.tobsGPs_emed_H if GP else self.tobss_emed_H
+    tobsN= self.tobsGPs_med_N if GP else self.tobss_med_N
+    etobsN= self.tobsGPs_emed_N if GP else self.tobss_emed_N
+    ratio = unp.uarray(tobsH / tobsN, etobsH / etobsN)
 
     fig = plt.figure(figsize=(4.8,3.6))
     ax = fig.add_subplot(111)

@@ -112,7 +112,7 @@ class RVInformation:
             Seff = SeffSun + a*Ts + b*Ts**2 + c*Ts**3 + d*Ts**4
             Ls = 10**(lint_L(self.Mss[i], 2.))
             dist = np.sqrt(Ls/Seff)
-            HZPlims = rvs.period_sma(dist, Ms, 0.)
+            HZPlims = rvs.period_sma(dist, self.Mss[i], 0.)
             self.HZflags[i] = 1. if (self.Ps[i] >= HZPlims.min()) & \
                               (self.Ps[i] <= HZPlims.max()) else 0.
         
