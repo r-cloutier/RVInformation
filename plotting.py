@@ -1119,7 +1119,8 @@ def plot_cumulative_detections_v_tobs_MR(self, pltt=True, label=False,
 
 def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
                                                    tmax=1e6, Nrand=10, seed=0,
-                                                   pltflag=0, GP=0, sigma=5.):
+                                                   pltflag=0, GP=False,
+                                                   sigma=5.):
     '''0=full, 1=background, 2=opt curves, 3=nir curves'''
     fig = plt.figure(figsize=(5.5,5.4))# 5.2
     gs = gridspec.GridSpec(10,1)
@@ -1129,8 +1130,9 @@ def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
     np.random.seed(int(seed))
     corr = (.327/.189)**2 if sigma == 5 else 1
     transmission_depth = _get_transmission_depth(self)
-    g = (transmission_depth >= 20) & (self.rps_med <= 2)
-
+    g = (transmission_depth >= 20) & (self.rps_med <= 4) & (self.rps_med > 2)
+    #g = self.Jmags_med < 10
+    
     # NIRPS total observing time
     if pltflag in [0,3]:
         tobsN = self.tobsGPs_med_N if GP else self.tobss_med_N
@@ -1196,11 +1198,11 @@ def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
     ax2.set_xscale('log'),
     ax2.set_xlim((1,tmax))
     ax1.minorticks_on()
-    ax4.set_xlim((0,1e3)), ax4.set_ylim((0,50))
+    ax4.set_xlim((0,1e3)), ax4.set_ylim((0,150))
     ax4.set_xticks(np.linspace(0,1e3,5))
     ax4.set_xticklabels(['0','','500','','1000'], fontsize=12)
-    ax4.set_yticks(np.arange(0,51,10))
-    ax4.set_yticklabels(np.arange(0,51,10,dtype=int), fontsize=12)
+    ax4.set_yticks(np.arange(0,151,20))
+    ax4.set_yticklabels(np.arange(0,151,20,dtype=int), fontsize=12)
     ax4.minorticks_on()
     if pltflag in [0,1]:
         ax1.set_ylabel('Total number of\nplanet detections', fontsize=13)
@@ -1208,7 +1210,7 @@ def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
         #ax1.set_yticklabels(np.arange(0,51,10), fontsize=13)
         ax2.set_xlabel('Cumulative observing time [hours]', fontsize=13)
         ax2.set_ylabel('dN / dt\n[detections / hour]', fontsize=12, labelpad=0)
-        ax1.set_title('Super-Earths w/ transmission depth > 20 ppm',
+        ax1.set_title('Sub-Neptunes w/ transmission depth > 20 ppm',
                       fontsize=12)
     else:
         ax1.set_yticklabels('')
@@ -1243,8 +1245,8 @@ def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
             label = 'nir'
         transparent = False if pltflag in [0,1] else True
         GPlabel = 'GP' if GP else ''
-        plt.savefig('plots/cumulativetobs%s_transmission_%s.png'%(GPlabel,
-                                                                  label),
+        plt.savefig('plots/cumulativetobs%s_transmissionNep_%s.png'%(GPlabel,
+                                                                     label),
                     transparent=transparent)
     if pltt:
 	plt.show()
@@ -1557,28 +1559,31 @@ def _compute_curve_derivative(tobs, Ndet, sigma=5):
     return tobs2, dNdt
 
 
-def plot_identifying_best_50(self, s=10, pltt=True, label=False, pltflag=0):
+def plot_identifying_best_50(self, s=10, pltt=True, label=False, pltflag=0,
+                             GP=False):
     '''
     Plot variables to try and guess which parameters best tell which small 
     planets we can observe most efficiently.
     e.g. self_xarr = self.Vmags_med
     0: full, 1:bkgd, 2:best, 3:regions
     '''
-    g = (self.rps_med < 4)
-    tobss_med = np.append(self.tobss_med_H[g], self.tobss_med_N[g])
+    tobsH = self.tobsGPs_med_H if GP else self.tobss_med_H
+    tobsN = self.tobsGPs_med_N if GP else self.tobss_med_N
+    g = (self.rps_med < 4) & (tobsH <= 1e5) & (tobsN <= 1e5) & \
+        (self.badflags_med == 0)
+    tobss_med = np.append(tobsH[g], tobsN[g])
     
     fig = plt.figure(figsize=(4,6.2))  # 5.7,5.1
     ax1 = fig.add_subplot(211)
     ax2 = fig.add_subplot(212)
-    colmap = _truncate_colormap(plt.get_cmap('jet'),0,1)
+    colmap = _truncate_colormap(plt.get_cmap('Blues'),0,1)
     # set colorbar
     if pltflag in [0,1]:
         img = ax1.scatter(self.Vmags_med[g], self.rps_med[g],
-                          c=self.tobss_med_H[g],
-                          cmap=plt.get_cmap(colmap), s=0,
+                          c=tobsH[g], cmap=plt.get_cmap(colmap), s=0,
                           norm=colors.LogNorm(vmin=1, vmax=tobss_med.max()))
         # add transluscent points
-        ax1.scatter(self.Vmags_med[g], self.rps_med[g], c=self.tobss_med_H[g],
+        ax1.scatter(self.Vmags_med[g], self.rps_med[g], c=tobsH[g],
                     facecolors='none', cmap=plt.get_cmap(colmap), alpha=1, s=s,
                     norm=colors.LogNorm(vmin=1,vmax=tobss_med.max()))
         cbar_axes = fig.add_axes([.08, .08, .84, .032])
@@ -1587,14 +1592,13 @@ def plot_identifying_best_50(self, s=10, pltt=True, label=False, pltflag=0):
     
     # Get 50 best
     if pltflag in [0,2]:
-        sort = np.argsort(self.tobss_med_H[g])[:50]
-        x, y = self.Vmags_med[g], self.rps_med[g]
-        ax1.scatter(x[sort], y[sort], facecolor='none', edgecolor='k', s=s+2)
+        sort = np.argsort(tobsH[g])[:50]
+        ax1.scatter(self.Vmags_med[g][sort], self.rps_med[g][sort], facecolor='none', edgecolor='k', s=s+2)
     
     # fill 'good' region
     if pltflag in [0,3]:
         m, b = get_best_fraction(self.Vmags_med[g], self.rps_med[g],
-                                 self.tobss_med_H[g])
+                                 tobsH[g])
         print 'V slope and intercept: ', m, b
         line = lambda x: m*x + b
         ax1.fill_between([3.5,11.35], [line(3.5),line(11.35)], 30, color='k',
@@ -1612,24 +1616,24 @@ def plot_identifying_best_50(self, s=10, pltt=True, label=False, pltflag=0):
     if pltflag in [0,1]:
         # set colorbar
         ax2.scatter(self.Jmags_med[g], self.rps_med[g],
-                    c=self.tobss_med_N[g],
+                    c=tobsN[g],
                     cmap=plt.get_cmap(colmap), s=0, 
                     norm=colors.LogNorm(vmin=1, vmax=tobss_med.max()))
         # add transluscent points
-        ax2.scatter(self.Jmags_med[g], self.rps_med[g], c=self.tobss_med_N[g],
+        ax2.scatter(self.Jmags_med[g], self.rps_med[g], c=tobsN[g],
                     facecolors='none', cmap=plt.get_cmap(colmap), alpha=1, s=s,
                     norm=colors.LogNorm(vmin=1,vmax=tobss_med.max()))
     
     # Get 50 best
     if pltflag in [0,2]:
-        sort = np.argsort(self.tobss_med_N[g])[:50]
+        sort = np.argsort(tobsN[g])[:50]
         x, y = self.Jmags_med[g], self.rps_med[g]
         ax2.scatter(x[sort], y[sort], facecolor='none', edgecolor='k', s=s+2)
 
     # fill 'good' region
     if pltflag in [0,3]:
         m, b = get_best_fraction(self.Jmags_med[g], self.rps_med[g],
-                                 self.tobss_med_N[g])
+                                 tobsN[g])
         print m, b
         line = lambda x: m*x + b
         ax2.fill_between([3.5,10.], [line(3.5),line(10.)], 30, color='k',
