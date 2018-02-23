@@ -1118,7 +1118,7 @@ def plot_cumulative_detections_v_tobs_MR(self, pltt=True, label=False,
 
 
 def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
-                                                   tmax=1e6, Nrand=10, seed=0,
+                                                   tmax=1e4, Nrand=10, seed=0,
                                                    pltflag=0, GP=True,
                                                    sigma=3.):
     '''0=full, 1=background, 2=opt curves, 3=nir curves'''
@@ -1253,7 +1253,7 @@ def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
 
 
 def plot_cumulative_detections_v_Nrvs_transmission(self, pltt=True, label=False,
-                                                   Nmax=1e6, Nrand=10, seed=0,
+                                                   Nmax=1e5, Nrand=10, seed=0,
                                                    pltflag=0, GP=True,
                                                    sigma=3.):
     '''0=full, 1=background, 2=opt curves, 3=nir curves'''
@@ -1277,7 +1277,6 @@ def plot_cumulative_detections_v_Nrvs_transmission(self, pltt=True, label=False,
         ax1.plot(Nrv, Ndet, '-', c=colN, drawstyle='steps')
 	ax1.text(.12, .65, 'Near-IR', color=colN, fontsize=13, 
 		 weight='semibold', transform=ax1.transAxes)
-        print 'issue with differentiating the GP curve here'
         Nrv2, dNdt = _compute_curve_derivative(Nrv, Ndet)
         ax2.plot(Nrv2, dNdt, '-', c=colN)
         ax4.plot(Nrv, Ndet, '-', c=colN, drawstyle='steps')
@@ -1310,7 +1309,7 @@ def plot_cumulative_detections_v_Nrvs_transmission(self, pltt=True, label=False,
         threshold = 1./100  # detections / measurement
         ax2.plot([1,Nmax], np.repeat(threshold,2), 'k--')
         ax2.text(1e3, threshold*1.06,
-                 '%i hours / detection'%(1./threshold),
+                 '%i measurements / detection'%(1./threshold),
                  verticalalignment='bottom', fontsize=9)
     if pltflag in [0,2]:
         inds = np.arange(g.sum())
