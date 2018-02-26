@@ -17,9 +17,10 @@ from compute_sigK_QPGP import compute_sigmaK_GP
 #                                  r'\usepackage{amsmath}']}
 #plt.rcParams.update(params)
 
-global colH, colN, sigmaSB
-colH, colN, sigmaSB = '#4444ff', '#a30000', 5.67e-8
-    
+global colH, colN, sigmaSB, kB, G, mp
+colH, colN, sigmaSB, kB, G = '#4444ff', '#a30000', 5.67e-8, 1.38e-23, 6.67e-11
+mp = 1.67e-27
+
 mpl.rc('xtick', labelsize=13)
 mpl.rc('ytick', labelsize=13)
 mpl.rc('axes', titlepad=3)
@@ -1118,9 +1119,9 @@ def plot_cumulative_detections_v_tobs_MR(self, pltt=True, label=False,
 
 
 def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
-                                                   tmax=1e4, Nrand=10, seed=0,
+                                                   tmax=1e5, Nrand=10, seed=0,
                                                    pltflag=0, GP=True,
-                                                   sigma=3.):
+                                                   sigmarho=3.):
     '''0=full, 1=background, 2=opt curves, 3=nir curves'''
     fig = plt.figure(figsize=(5.5,5.4))# 5.2
     gs = gridspec.GridSpec(10,1)
@@ -1128,17 +1129,17 @@ def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
     ax2 = plt.subplot(gs[7:,0])
     ax4 = fig.add_axes([.24, .6, .32, .32])
     np.random.seed(int(seed))
-    corr = (.327/.189)**2 if sigma == 5 else 1.
     #transmission_depth = _get_transmission_depth(self)
     #g = (transmission_depth >= 20) & (self.rps_med <= 4) & (self.rps_med > 2)
-    g = self.Jmags_med < 10
+    g = (self.Jmags_med >= 6.1) & (self.Jmags_med <= 10.7)
+    _,corr = _get_tobs_scaling(sigmarho, self.starnums_med[g], self.mps_med[g])
     
     # NIRPS total observing time
     if pltflag in [0,3]:
         tobsN = self.tobsGPs_med_N if GP else self.tobss_med_N
         tobs = np.sort(tobsN[g] * corr)
         tobs = np.append(0, np.cumsum(tobs))
-	Ndet = np.arange(tobs.size)
+        Ndet = np.arange(tobs.size)
 	ax1.plot(tobs, Ndet, '-', c=colN, drawstyle='steps')
 	ax1.text(.12, .65, 'Near-IR', color=colN, fontsize=13, 
 		 weight='semibold', transform=ax1.transAxes)
@@ -1196,11 +1197,11 @@ def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
     ax2.set_xscale('log'),
     ax2.set_xlim((1,tmax))
     ax1.minorticks_on()
-    ax4.set_xlim((0,1e3)), ax4.set_ylim((0,300))
+    ax4.set_xlim((0,1e3)), ax4.set_ylim((0,130))
     ax4.set_xticks(np.linspace(0,1e3,5))
     ax4.set_xticklabels(['0','','500','','1000'], fontsize=12)
-    ax4.set_yticks(np.arange(0,301,50))
-    ax4.set_yticklabels(np.arange(0,301,50,dtype=int), fontsize=12)
+    ax4.set_yticks(np.arange(0,130,30))
+    ax4.set_yticklabels(np.arange(0,130,30,dtype=int), fontsize=12)
     ax4.minorticks_on()
     if pltflag in [0,1]:
         ax1.set_ylabel('Total number of\nplanet detections', fontsize=13)
@@ -1210,7 +1211,7 @@ def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
         ax2.set_ylabel('dN / dt\n[detections / hour]', fontsize=12, labelpad=0)
         #ax1.set_title('Sub-Neptunes w/ transmission depth > 20 ppm',
         #              fontsize=12)
-        ax1.set_title('J < 10', fontsize=12)
+        ax1.set_title('6.1 $\leq$ J $\leq$ 10.7', fontsize=12)
     else:
         ax1.set_yticklabels('')
         ax2.set_xticklabels('')
@@ -1382,6 +1383,40 @@ def plot_cumulative_detections_v_Nrvs_transmission(self, pltt=True, label=False,
 	plt.show()
     plt.close('all')
 
+
+def plot_transmission_scatter(self, Nplanets_opt=128, Nplanets_nir=112,
+                              GP=True, pltt=True, label=False):
+    # get planets that we can detect before the efficiency drops below
+    # 20 hrs/detection
+    g = (self.Jmags_med >= 6.1) & (self.Jmags_med <= 10.7)
+    tobsH = self.tobsGPs_med_H if GP else self.tobss_med_H
+    sH = np.argsort(tobsH[g])[:int(Nplanets_opt)]
+    tobsN = self.tobsGPs_med_N if GP else self.tobss_med_N
+    sN = np.argsort(tobsN[g])[:int(Nplanets_nir)]
+
+    # compute planet temperatures and transmission signals
+    smas = rvs.AU2m(rvs.semimajoraxis(self.Ps_med, self.Mss_med, self.mps_med))
+    Teqs = self.Teffs_med * np.sqrt(rvs.Rsun2m(self.Rss_med) / (2*smas))
+    mus = np.repeat(2., self.nstars)
+    mus[self.rps_med <= 2] = 18.
+    transmission_ppm = rvs.transmission_spectroscopy_depth(self.Rss_med,
+                                                           self.mps_med,
+                                                           self.rps_med,
+                                                           Teqs, mus)
+    
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.scatter(self.rps_med[g][sH], Teqs[g][sH], c=colH,
+               s=transmission_ppm[g][sH]/10, alpha=.4)
+    ax.scatter(self.rps_med[g][sN], Teqs[g][sN], c=colN,
+               s=transmission_ppm[g][sN]/10, alpha=.5)
+
+    ax.set_xlim((0,10))
+    
+    if pltt:
+        plt.show()
+    plt.close('all')
+    
     
     
 def plot_cumulative_detections_v_tobs_CVZ(self, pltt=True, label=False,
@@ -1399,7 +1434,7 @@ def plot_cumulative_detections_v_tobs_CVZ(self, pltt=True, label=False,
     g = inCVZ == 1
 
     # get scaling to 3sigma density detection
-    scaling = _get_tobs_scaling(sigmarho, self.starnums_med, self.mps_med)
+    _,scaling = _get_tobs_scaling(sigmarho, self.starnums_med, self.mps_med)
     
     # HARPS total observing time
     if pltflag in [0,2]:
@@ -1539,13 +1574,13 @@ def _get_tobs_scaling(sigmarho, starnums, mps, sigP=5e-5,
     fracsigK = np.sqrt((sigmp/mps)**2 - (sigP/(3*P[g]))**2 - (2*fracsigMs/3)**2)
 
     # return scaling of tobs from 3sigma mass detection
-    return (.327 / fracsigK)**2
+    return fracsigK, (.327 / fracsigK)**2
     
     
 
 def plot_cumulative_detections_v_tobs_HZ(self, pltt=True, label=False,
                                          tmax=2e5, Nrand=10, seed=0, pltflag=0,
-                                         GP=True, sigma=5.):
+                                         GP=True, sigma=3.):
     '''0=full, 1=background, 2=opt curves, 3=nir curves'''
     fig = plt.figure(figsize=(5.5,5.4))# 5.2
     gs = gridspec.GridSpec(10,1)

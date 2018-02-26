@@ -11,6 +11,7 @@ input_data/tapas*
 /RVFollowupCalculator
 <<<<<<< HEAD
 /pickles
+/.ipynb_checkpoints
 =======
 >>>>>>> 2127293c623481c49976119d4a263226856eb9e1
 testsigmaRVphot.py
