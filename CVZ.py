@@ -3,7 +3,7 @@ import numpy as np
 global raNorth, decNorth, raSouth, decSouth, radius
 raNorth, decNorth = 270., 66.56070889
 raSouth, decSouth = 90., -66.56070889
-radius = 5.
+radius = 10.
 
 def is_star_in_CVZ(alpha_deg, delta_deg):
     alpha_deg, delta_deg = np.ascontiguousarray(alpha_deg), \
