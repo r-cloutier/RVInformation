@@ -3,9 +3,10 @@ import numpy as np
 global raNorth, decNorth, raSouth, decSouth, radius
 raNorth, decNorth = 270., 66.56070889
 raSouth, decSouth = 90., -66.56070889
-radius = 10.
 
-def is_star_in_CVZ(alpha_deg, delta_deg):
+
+# radius = 5 for JWST, radius=10 for TESS
+def is_star_in_CVZ(alpha_deg, delta_deg, radius=10):
     alpha_deg, delta_deg = np.ascontiguousarray(alpha_deg), \
 			   np.ascontiguousarray(delta_deg)
     # Check Northern CVZ
