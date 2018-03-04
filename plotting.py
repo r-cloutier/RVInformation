@@ -1866,3 +1866,181 @@ def _get_transmission_depth(self):
     mu[self.rps_med <= 2] = 18.
     return rvs.transmission_spectroscopy_depth(self.Rss_med, self.mps_med,
                                                self.rps_med, Tp, mu)
+
+
+def plot_individual_Nrv_histogram(self, starnum, nbins=15,
+                                  label=False, pltt=True):
+    assert 0 <= starnum <= 1983
+    fig = plt.figure(figsize=(5,6))
+    ax = fig.add_subplot(111)
+    scale = (.327/.189)**2
+    Nrvs = self.NrvGPs*scale
+    Nrvs[Nrvs < 10] = 10.
+    tobs = self.texps*Nrvs / 60.
+
+    # plot optical
+    g = (self.starnums == starnum) & (self.spectrographs == 'H')
+    assert g.sum() == 100
+    ax.hist(Nrvs[g], bins=np.logspace(0,np.log10(Nrvs[g].max()),nbins),
+            histtype='step', color=colH, lw=3, label='Optical')
+    ax.axvline(np.median(Nrvs[g]), ls='--', lw=.9, color=colH)
+    ax.set_xlabel('N$_{RV}$ (5$\sigma$)'), ax.set_xscale('log')
+    ax.set_xlim((1,3e3))
+
+    # plot nearIR
+    gN = (self.starnums == starnum) & (self.spectrographs == 'N')
+    assert g.sum() == 100
+    ax.hist(Nrvs[gN], bins=np.logspace(0,np.log10(Nrvs[gN].max()),nbins),
+            histtype='step', color=colN, lw=3, label='Near-IR')
+    ax.axvline(np.median(Nrvs[gN]), ls='--', lw=.9, color=colN)
+    ax.legend()
+    ax.set_title('TOI = %.4d'%starnum, weight='semibold')
+    
+    # first compute transmission depth
+    sma = rvs.AU2m(rvs.semimajoraxis(self.Ps[g][0], self.Mss[g][0],
+                                     self.mps[g][0]))
+    Teq = self.Teffs[g][0] * np.sqrt(rvs.Rsun2m(self.Rss[g][0]) / (2*sma))
+    mu = 30. if self.rps[g][0] <=2 else 2.
+    transmission_ppm = rvs.transmission_spectroscopy_depth(self.Rss[g][0],
+                                                           self.mps[g][0],
+                                                           self.rps[g][0],
+                                                           Teq, mu)
+
+    if np.median(tobs[g]) < np.median(tobs[gN]):
+        weightH, weightN = 'semibold', 'normal'
+    else:
+        weightH, weightN =  'normal', 'semibold'
+
+    # Stellar/planet properties
+    gmed = self.starnums_med == starnum
+    ax.text(0, 1.45, 'J = %.2f'%self.Jmags_med[gmed][0],
+            transform=ax.transAxes)    
+    ax.text(0, 1.4, 'M$_s$ = %.2f M$_{\odot}$'%self.Mss[g][0],
+            transform=ax.transAxes)
+    ax.text(0, 1.35, 'Teff = %i K'%self.Teffs[g][0], transform=ax.transAxes)
+    ax.text(0, 1.3, '$\sigma_{activity}$ = %.1f m/s'%self.sigmaRV_acts_med_H[gmed], transform=ax.transAxes)
+    ax.text(0, 1.25, 't$_{exp,opt}$ = %.1f min'%self.texps_med_H[gmed],
+            transform=ax.transAxes, color=colH, weight=weightH)
+    ax.text(0,1.2,'med($\sigma_{RV,opt}$) = %.1f m/s'%self.sigmaRV_phot_med_H[gmed],
+            transform=ax.transAxes, color=colH, weight=weightH)
+    ax.text(0, 1.15, 't$_{exp,nIR}$ = %.1f min'%self.texps_med_N[gmed],
+            transform=ax.transAxes, color=colN, weight=weightN)
+    ax.text(0,1.1,'med($\sigma_{RV,nIR}$) = %.1f m/s'%self.sigmaRV_phot_med_N[gmed], transform=ax.transAxes, color=colN, weight=weightN)
+
+    ax.text(.5, 1.45, 'P = %.2f days'%self.Ps[g][0], transform=ax.transAxes)
+    ax.text(.5, 1.4, 'r$_p$ = %.2f R$_{\oplus}$'%self.rps[g][0],
+            transform=ax.transAxes)
+    ax.text(.5, 1.35, 'K = %.2f m/s ($\sigma_K$ = %.2f m/s)'%(self.Ks[g][0],
+                                                              self.Ks[g][0]/5.),
+            transform=ax.transAxes)
+    ax.text(.5, 1.3, '$\delta F/F$ (transmission) = %i ppm'%transmission_ppm,
+            transform=ax.transAxes)
+    ax.text(.5, 1.25, 'med(N$_{RV,opt}$) = %.1f'%np.median(Nrvs[g]),
+            transform=ax.transAxes, color=colH, weight=weightH)
+    ax.text(.5, 1.2, 'med(t$_{obs,opt}$) = %.1f hours'%np.median(tobs[g]),
+            transform=ax.transAxes, color=colH, weight=weightH)
+    ax.text(.5, 1.15, 'med(N$_{RV,nIR}$) = %.1f'%np.median(Nrvs[gN]),
+            transform=ax.transAxes, color=colN, weight=weightN)
+    ax.text(.5, 1.1, 'med(t$_{obs,nIR}$) = %.1f hours'%np.median(tobs[gN]),
+            transform=ax.transAxes, color=colN, weight=weightN)
+    
+    fig.subplots_adjust(bottom=.1, top=.7)
+    if label:
+        plt.savefig('plots/TOIhistograms/TOIhist_%.4d.png'%starnum)
+    if pltt:
+        plt.show()
+    plt.close('all')
+
+
+
+def plot_WP2_Nrvs_histograms(self, nbins=15, label=False, pltt=True):
+    inds = np.array([  12,   47,   92,  138,  167,  200,  219,  356,  387,  423,  431,
+                       446,  470,  487,  515,  526,  544,  708,  815,  817,  832,  840,
+                       844,  857,  859,  876,  877,  933,  935,  944,  947,  969,  992,
+                       1038, 1042, 1055, 1058, 1071, 1072, 1075, 1120, 1161, 1164, 1165,
+                       1166, 1188, 1210, 1213, 1221, 1223, 1254, 1259, 1292, 1295, 1307,
+                       1321, 1337, 1392, 1405, 1412, 1420, 1438, 1451, 1475, 1481, 1498,
+                       1513, 1522, 1526, 1560, 1565, 1607, 1666, 1799, 1806, 1834, 1860,
+                       1873, 1929, 1934, 1944, 1956, 1967, 1976])
+
+    # plot Nrvs
+    fig = plt.figure(0, figsize=(6,5))
+    ax = fig.add_subplot(111)
+    g = np.in1d(self.starnums_med, inds)
+    scale = (.327/.189)**2
+    ax.hist(self.NrvGPs_med_N[g]*scale,
+            bins=np.logspace(0,np.log10(self.NrvGPs_med_N[g].max()*scale),nbins), histtype='step', lw=3, color=colN, label='Near-IR')
+    ax.axvline(np.median(self.NrvGPs_med_N[g]*scale), ls='--', lw=.9,
+               color=colN)
+    ax.text(.65, .85, 'median = %.2f'%np.median(self.NrvGPs_med_N[g]*scale),
+            transform=ax.transAxes)
+    ax.set_xlabel('median(N$_{RV}$) (5$\sigma$)'), ax.set_xscale('log')
+    ax.set_xlim((1,3e3)), ax.set_title('%i WP2 TOIs'%inds.size)
+
+    if label:
+        plt.savefig('plots/WP2Nrvs.png')
+    if pltt:
+        plt.show()
+    plt.close('all')
+
+
+
+def plot_WP2_texps_histograms(self, nbins=15, label=False, pltt=True):
+    inds = np.array([  12,   47,   92,  138,  167,  200,  219,  356,  387,  423,  431,
+                       446,  470,  487,  515,  526,  544,  708,  815,  817,  832,  840,
+                       844,  857,  859,  876,  877,  933,  935,  944,  947,  969,  992,
+                       1038, 1042, 1055, 1058, 1071, 1072, 1075, 1120, 1161, 1164, 1165,
+                       1166, 1188, 1210, 1213, 1221, 1223, 1254, 1259, 1292, 1295, 1307,
+                       1321, 1337, 1392, 1405, 1412, 1420, 1438, 1451, 1475, 1481, 1498,
+                       1513, 1522, 1526, 1560, 1565, 1607, 1666, 1799, 1806, 1834, 1860,
+                       1873, 1929, 1934, 1944, 1956, 1967, 1976])
+
+    # plot exposure times
+    fig = plt.figure(1, figsize=(6,5))
+    ax = fig.add_subplot(111)
+    g = np.in1d(self.starnums_med, inds)
+    scale = (.327/.189)**2    
+    ax.hist(self.texps_med_N[g], bins=np.linspace(10,60,nbins),
+            histtype='step', lw=3, color=colN, label='Near-IR')
+    ax.axvline(np.median(self.texps_med_N[g]), ls='--', lw=.9, color=colN)
+    ax.text(.65, .85, 'median = %.2f'%np.median(self.texps_med_N[g]),
+            transform=ax.transAxes)
+    ax.set_xlabel('median(t$_{exp}$) [minutes]'), ax.set_xlim((0,60)),
+    ax.set_title('%i WP2 TOIs'%inds.size)
+
+    if label:
+        plt.savefig('plots/WP2texps.png')
+    if pltt:
+        plt.show()
+    plt.close('all')
+
+
+def plot_WP2_tobs_histograms(self, nbins=15, label=False, pltt=True):
+    inds = np.array([  12,   47,   92,  138,  167,  200,  219,  356,  387,  423,  431,
+                       446,  470,  487,  515,  526,  544,  708,  815,  817,  832,  840,
+                       844,  857,  859,  876,  877,  933,  935,  944,  947,  969,  992,
+                       1038, 1042, 1055, 1058, 1071, 1072, 1075, 1120, 1161, 1164, 1165,
+                       1166, 1188, 1210, 1213, 1221, 1223, 1254, 1259, 1292, 1295, 1307,
+                       1321, 1337, 1392, 1405, 1412, 1420, 1438, 1451, 1475, 1481, 1498,
+                       1513, 1522, 1526, 1560, 1565, 1607, 1666, 1799, 1806, 1834, 1860,
+                       1873, 1929, 1934, 1944, 1956, 1967, 1976])
+    
+    # plot observing times
+    fig = plt.figure(2, figsize=(6,5))
+    ax = fig.add_subplot(111)
+    g = np.in1d(self.starnums_med, inds)
+    scale = (.327/.189)**2
+    ax.hist(self.tobsGPs_med_N[g]*scale,
+            bins=np.logspace(0,np.log10(self.tobsGPs_med_N[g].max()*scale),nbins), histtype='step', lw=3, color=colN, label='Near-IR')
+    ax.axvline(np.median(self.tobsGPs_med_N[g]*scale), ls='--', lw=.9,
+               color=colN)
+    ax.text(.65, .85, 'median = %.2f'%np.median(self.tobsGPs_med_N[g]*scale),
+            transform=ax.transAxes)
+    ax.set_xlabel('median(t$_{obs}$) [hours]'), ax.set_xscale('log')
+    ax.set_xlim((1,3e3)), ax.set_title('%i WP2 TOIs'%inds.size)
+
+    if label:
+        plt.savefig('plots/WP2tobs.png')
+    if pltt:
+        plt.show()
+    plt.close('all')
