@@ -48,7 +48,7 @@ def sigK_LHS1140(N=1e3, P=24.73712, T0=2456915.6997):
     
     # sample parameter posteriors approximating the PDFs as Gaussian
     N = int(N)
-    Krvs = _random_normal_draws(5.34, 1.1, N, positive=True)
+    Krvs = _random_normal_draws(5.3, 1.1, N, positive=True)
     As = _random_normal_draws(9, 5, N, positive=True)
     ls = _random_normal_draws(393/np.sqrt(2), 30/np.sqrt(2), N, positive=True)
     Gs = _random_normal_draws(2, .2, N, positive=True)
