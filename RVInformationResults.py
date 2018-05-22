@@ -12,6 +12,8 @@ class RVInformation:
         self._get_data()
 	self._get_median_star_results()
         self._get_median_star_results_per_spectrograph()
+	# as per referee
+	self._change_throughput()
 	self._pickleobject()
 
 
@@ -393,6 +395,27 @@ class RVInformation:
             self.Nrvs_emed_S[i] = MAD(self.Nrvs[nir])
             self.tobsGPs_emed_S[i] = MAD(self.tobsGPs[nir])
             self.NrvGPs_emed_S[i] = MAD(self.NrvGPs[nir])
+
+
+    def _change_throughput(self, throughput_new=.05):
+	throughput_old = self.throughputs_med.mean()
+	factor = np.sqrt(throughput_old/throughput_new)	
+
+	eff_scaleH = np.sqrt((self.sigmaRV_phot_med_H*factor)**2 + self.sigmaRV_acts_med_H**2 + self.sigmaRV_planets_med_H**2) / np.sqrt(self.sigmaRV_phot_med_H**2 + self.sigmaRV_acts_med_H**2 + self.sigmaRV_planets_med_H**2)
+	eff_scaleN = np.sqrt((self.sigmaRV_phot_med_N*factor)**2 + self.sigmaRV_acts_med_N**2 + self.sigmaRV_planets_med_N**2) / np.sqrt(self.sigmaRV_phot_med_N**2 + self.sigmaRV_acts_med_N**2 + self.sigmaRV_planets_med_N**2)
+
+	self.sigmaRV_phot_med_H *= factor
+	self.sigmaRV_phot_med_N *= factor
+
+	self.sigmaRV_eff_med_H *= eff_scaleH
+	self.sigmaRV_eff_med_N *= eff_scaleN
+
+	self.tobss_med_H *= eff_scaleH**2
+        self.tobss_med_N *= eff_scaleN**2
+
+        self.tobsGPs_med_H *= eff_scaleH**2
+        self.tobsGPs_med_N *= eff_scaleN**2
+
 
             
     def _pickleobject(self):
