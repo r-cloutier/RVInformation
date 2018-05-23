@@ -13,6 +13,7 @@ class RVInformation:
 	self._get_median_star_results()
         self._get_median_star_results_per_spectrograph()
 	# as per referee
+        #self._add_readnoise()
 	self._change_throughput()
 	self._pickleobject()
 
@@ -400,6 +401,7 @@ class RVInformation:
     def _change_throughput(self, throughput_new=.05):
 	throughput_old = self.throughputs_med.mean()
 	factor = np.sqrt(throughput_old/throughput_new)	
+	self.throughputs_med = np.ones_like(self.throughputs_med) * throughput_new
 
 	eff_scaleH = np.sqrt((self.sigmaRV_phot_med_H*factor)**2 + self.sigmaRV_acts_med_H**2 + self.sigmaRV_planets_med_H**2) / np.sqrt(self.sigmaRV_phot_med_H**2 + self.sigmaRV_acts_med_H**2 + self.sigmaRV_planets_med_H**2)
 	eff_scaleN = np.sqrt((self.sigmaRV_phot_med_N*factor)**2 + self.sigmaRV_acts_med_N**2 + self.sigmaRV_planets_med_N**2) / np.sqrt(self.sigmaRV_phot_med_N**2 + self.sigmaRV_acts_med_N**2 + self.sigmaRV_planets_med_N**2)

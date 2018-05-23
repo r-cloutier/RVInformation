@@ -172,7 +172,7 @@ def plot_Nrv_estimates(pltt=True, label=False):
     #np.random.seed(1)
     #np.random.shuffle(g)
     cax = ax.scatter(Nrv_true[g], Nrv_calc[g], edgecolors='none', marker='o',
-                     c=c[g], s=60, label='white activity model',
+                     c=c[g], s=60, label='white noise model',
                      norm=LogNorm(vmin=vmin, vmax=vmax),
 		     cmap=_truncate_colormap(plt.get_cmap('rainbow'),0,1))
     cbar_axes = fig.add_axes([.08,.1,.84,.04])
@@ -202,7 +202,7 @@ def plot_Nrv_estimates(pltt=True, label=False):
                 elinewidth=.8, capsize=0)
     print GPNrvs[:,0], GPNrvs[:,1]
     ax.scatter(Nrvtargets, GPNrvs[:,0], edgecolors='k', marker='d',
-               c=Ks/sigKtargets, s=60, label='red activity model',
+               c=Ks/sigKtargets, s=60, label='correlated noise model',
                norm=LogNorm(vmin=vmin, vmax=vmax),
 	       cmap=_truncate_colormap(plt.get_cmap('rainbow'),0,1))
     
@@ -218,13 +218,62 @@ def plot_Nrv_estimates(pltt=True, label=False):
     ax.set_yticklabels(['%i'%i for i in np.logspace(0,2,3)])
     ax.minorticks_on()
 
-    ax.legend(bbox_to_anchor=(.62,.95), fontsize=9,
+    ax.legend(bbox_to_anchor=(.67,.95), fontsize=9,
               handletextpad=.01, labelspacing=.7)
     fig.subplots_adjust(bottom=.27, left=.19, right=.97, top=1)
     if label:
         plt.savefig('plots/Nrvcomparison.png')
     if pltt:
         plt.show()
+    plt.close('all')
+
+
+def plot_Nrv_estimates_4referee(pltt=True, label=False):
+    # Get real planet data
+    starnames = np.genfromtxt('Nrv_tests/FASTtests.dat', dtype='str',
+                              usecols=(0))
+    _,sigeffs, sigKs, Nrv_true, Ks, rednoiseflag = \
+                                np.genfromtxt('Nrv_tests/FASTtests.dat').T
+    detsig = Ks / sigKs
+    c = Ks
+
+    # Compute Nrv
+    Nrv_calc = compute_Nrv(sigeffs, sigKs)
+    g = rednoiseflag == 0
+
+    plt.scatter(Nrv_true[g], Nrv_calc[g], c=c[g],
+		cmap=_truncate_colormap(plt.get_cmap('rainbow'),0,1))
+    #plt.colorbar()
+    plt.plot([1,250], [1,250], 'k--')
+    plt.xlabel('Observed N_RV'), plt.ylabel('Calculated N_RV')
+
+    names = ['CoRoT7','K218','Kep21HARPSN','Kep78HARPSN','LHS1140']
+    names2 = ['CoRoT-7','K2-18','Kepler-21','Kepler-78','LHS 1140']
+    xs, ys = [80,57,82,110,150], [60,85,130,140,200]
+    Ks = np.array([3.42, 3.18, 2.12, 1.86, 5.3])
+    sigKtargets, Nrvtargets = np.array([.66,.75,.66,.25,1.1]), \
+                              np.array([71,75,82,109,144])
+    sigeffs = sigKtargets * np.sqrt(Nrvtargets/2.)
+    GPNrvs = np.zeros((sigeffs.size, 2))
+    for i in range(sigeffs.size):
+        sigKs = np.loadtxt('Nrv_tests/GPtest_%s.dat'%names[i])[:,-1]
+        sigKs = sigKs[np.isfinite(sigKs)]
+        Nrvs = 2 * (sigeffs[i] / sigKs)**2
+        GPNrvs[i] = np.median(Nrvs), MAD(Nrvs)
+    plt.errorbar(Nrvtargets, GPNrvs[:,0], GPNrvs[:,1], fmt='kd', ms=5,
+                 elinewidth=.8, capsize=0)
+
+    Nrv_obs = np.append(Nrv_true[g], Nrvtargets)
+    Nrv_cal = np.append(Nrv_calc[g], GPNrvs[:,0])
+    print 'rms white = %.3f'%(np.std(Nrv_true[g]-Nrv_calc[g]))
+    print 'rms correlated = %.3f'%(np.std(Nrvtargets-GPNrvs[:,0]))
+    print 'rms total = %.3f'%(np.std(Nrv_obs-Nrv_cal))
+    print 'rms correlated (no LHS1140) = %.3f'%(np.std(Nrvtargets[:-1]-GPNrvs[:-1,0]))
+    print 'rms total (no LHS1140) = %.3f'%(np.std(Nrv_obs[:-1]-Nrv_cal[:-1]))
+
+
+    if pltt:
+	plt.show()
     plt.close('all')
 
     
@@ -2332,6 +2381,31 @@ def plot_WP2_tobs_histograms(self, nbins=15, label=False, pltt=True):
 
     if label:
         plt.savefig('plots/WP2tobs.png')
+    if pltt:
+        plt.show()
+    plt.close('all')
+
+
+def plot_sigRV_phot(self, pltt=True, label=False):
+    fig = plt.figure(figsize=(4.5,3.7))
+    ax = fig.add_subplot(111)
+
+    bins = np.logspace(-.5,np.log10(30),12)
+    ax.hist(np.array([self.sigmaRV_phot_med_H, self.sigmaRV_phot_med_N]).T, bins,
+            histtype='bar', color=[colH,colN])
+    ax.set_xscale('log'), ax.set_xlabel('$\sigma_{RV}$ [m/s]')
+    ax.set_ylabel('Number of TOIs'), ax.minorticks_on()
+    ax.set_xticks([.3,1,3,10,30])
+    ax.set_xticklabels(['0.3','1','3','10','30'])
+    
+    ax.text(.08, .88, 'Optical (BVR)', weight='semibold', color=colH,
+            transform=ax.transAxes, fontsize=12)
+    ax.text(.08, .8, 'Near-IR (YJH)', weight='semibold', color=colN,
+            transform=ax.transAxes, fontsize=12)
+
+    fig.subplots_adjust(bottom=.14, top=.96, right=.96, left=.16)
+    if label:
+        plt.savefig('plots/sigRVhist.png')
     if pltt:
         plt.show()
     plt.close('all')
