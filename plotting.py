@@ -436,18 +436,18 @@ def plot_compare_tobs_H_N(self, pltt=True, label=False, GP=True):
     cbar_axes = fig.add_axes([.07, .12, .86, .05])
     cbar = fig.colorbar(img, cax=cbar_axes, orientation='horizontal')
     cbar.set_label('$\sigma_{RV,opt}$ / $\sigma_{RV,nIR}$', labelpad=0)
-    ax.text(8.1e3, 4, 'Near-IR favored', fontsize=10)
-    ax.text(8.2e3, .25, 'Optical favored', verticalalignment='top', fontsize=10)
+    ax.text(8.5e3, 3, 'Near-IR (YJH)\nfavored', fontsize=10)
+    ax.text(8.6e3, .33, 'Optical (BVR)\nfavored', verticalalignment='top', fontsize=10)
 
     ax.set_yscale('log')
-    ax.set_ylim((5e-3, 50)), ax.set_xlim((25e2, 12e3))
+    ax.set_ylim((5e-3, 100)), ax.set_xlim((25e2, 12e3))
     ax.set_xticks(np.arange(3e3,13e3,3e3))
     ax.set_xticklabels(np.arange(3e3,13e3,3e3,dtype=int), fontsize=12)
     ax.set_ylabel('t$_{obs,opt}$ / t$_{obs,nIR}$', labelpad=0)
     ax.set_xlabel('Effective Temperature [K]')
     ax.minorticks_on()
 
-    fig.subplots_adjust(left=.19, bottom=.3, right=.93, top=.98)
+    fig.subplots_adjust(left=.19, bottom=.29, right=.93, top=.97)
     if label:
         plt.savefig('plots/optnIRratio.png')
     if pltt:
@@ -462,7 +462,7 @@ def plot_cumulative_detections_v_tobs(self, pltt=True, label=False,
     mpl.rc('ytick', labelsize=12)
 
     fig = plt.figure(figsize=(9.5,4.8))
-    ymaxs = 40,150,300,150
+    ymaxs = 40,110,240,150
     tobsH = self.tobsGPs_med_H if GP else self.tobss_med_H
     tobsN = self.tobsGPs_med_N if GP else self.tobss_med_N
 
@@ -482,7 +482,7 @@ def plot_cumulative_detections_v_tobs(self, pltt=True, label=False,
             # plot derivative
 	    if i == 0:
                 ax1.plot([50,200], np.repeat(35,2), '--', lw=2, c=colH)
-		ax1.text(240, 34.5, 'Optical', color=colH, fontsize=10, 
+		ax1.text(240, 34.5, 'Optical (BVR)', color=colH, fontsize=10, 
 			 weight='semibold', verticalalignment='center')
             # plot derivative
             tobs2, dNdt = _compute_curve_derivative(tobs[g], Ndet[g])
@@ -507,7 +507,7 @@ def plot_cumulative_detections_v_tobs(self, pltt=True, label=False,
 	    ax1.plot(tobs[g], Ndet[g], '-', c=colN, drawstyle='steps')
 	    if i == 0:
                 ax1.plot([50,200], np.repeat(29,2), '-', c=colN)
-                ax1.text(240, 29, 'Near-IR', color=colN, fontsize=10, 
+                ax1.text(240, 29, 'Near-IR (YJH)', color=colN, fontsize=10, 
                          weight='semibold', verticalalignment='center')
             # plot derivative
             tobs2, dNdt = _compute_curve_derivative(tobs[g], Ndet[g])
@@ -681,7 +681,7 @@ def plot_cumulative_detections_v_tobs_Teff(self, pltt=True, label=False,
     mpl.rc('ytick', labelsize=12)
 
     fig = plt.figure(figsize=(9.5,4.8))
-    ymaxs = 55,220,350,40
+    ymaxs = 60,200,300,40
     tobsH = self.tobsGPs_med_H if GP else self.tobss_med_H
     tobsN = self.tobsGPs_med_N if GP else self.tobss_med_N
     
@@ -702,7 +702,7 @@ def plot_cumulative_detections_v_tobs_Teff(self, pltt=True, label=False,
             # plot derivative
 	    if i == 3:
                 ax1.plot([410,560], np.repeat(29,2), '--', c=colH, lw=2)
-		ax1.text(6e2, 28, 'Optical', color=colH, fontsize=10,
+		ax1.text(6e2, 28, 'Optical\n(BVR)', color=colH, fontsize=9,
 			 weight='semibold', verticalalignment='center')
             # plot derivative
             tobs2, dNdt = _compute_curve_derivative(tobs[g], Ndet[g])
@@ -727,8 +727,8 @@ def plot_cumulative_detections_v_tobs_Teff(self, pltt=True, label=False,
             #_compute_curve_derivative(tobs[g], Ndet[g])
 	    ax1.plot(tobs[g], Ndet[g], '-', c=colN, drawstyle='steps')
 	    if i == 3:
-                ax1.plot([410,550], np.repeat(24,2), 'r-')
-                ax1.text(6e2, 23, 'Near-IR', color=colN, fontsize=10, 
+                ax1.plot([410,550], np.repeat(20,2), 'r-')
+                ax1.text(6e2, 19, 'Near-IR\n(YJH)', color=colN, fontsize=9, 
                          weight='semibold', verticalalignment='center')
             # plot derivative
             tobs2, dNdt = _compute_curve_derivative(tobs[g], Ndet[g])
@@ -922,9 +922,9 @@ def plot_cumulative_detections_v_tobs_50_random(self, pltt=True, label=False,
         tobs = np.append(0, np.cumsum(tobs))[:51]
         Ndet = np.arange(tobs.size)
         ax1.plot(tobs, Ndet, '--', c=colH, lw=2, drawstyle='steps')
-        ax2.text(.7, .79, 'Optical', color=colH, fontsize=13,
+        ax2.text(.51, .79, 'Optical (BVR)', color=colH, fontsize=13,
                  weight='semibold', transform=ax2.transAxes)
-        ax2.plot([9e2,25e2], np.repeat(1,2), '--', c=colH)
+        ax2.plot([1e2,250], np.repeat(1,2), '--', c=colH)
         # plot derivative
         tobs2, dNdt = _compute_curve_derivative(tobs, Ndet)
         ax2.plot(tobs2, dNdt, '--', c=colH, lw=2)
@@ -951,9 +951,9 @@ def plot_cumulative_detections_v_tobs_50_random(self, pltt=True, label=False,
         tobs = np.append(0, np.cumsum(tobs))[:51]
 	Ndet = np.arange(tobs.size)
 	ax1.plot(tobs, Ndet, '-', c=colN, drawstyle='steps')
-	ax2.text(.7, .63, 'Near-IR', color=colN, fontsize=13, 
+        ax2.text(.51, .63, 'Near-IR (YJH)', color=colN, fontsize=13, 
 		 weight='semibold', transform=ax2.transAxes)
-        ax2.plot([9e2,25e2], np.repeat(.5,2), '-', c=colN)
+        ax2.plot([1e2,250], np.repeat(.5,2), '-', c=colN)
         tobs2, dNdt = _compute_curve_derivative(tobs, Ndet)
         ax2.plot(tobs2, dNdt, '-', c=colN)
     if pltflag in [0,3]:
@@ -1309,7 +1309,7 @@ def plot_cumulative_detections_v_tobs_MR(self, pltt=True, label=False,
 
     
 def plot_cumulative_detections_v_tobs_Fulton(self, pltt=True, label=False,
-                                             tmax=1e5, Nrand=10, seed=0,
+                                             tmax=4e5, Nrand=10, seed=0,
                                              pltflag=0, GP=True, xscale='log',
                                              sigma=5.):
     '''0=all, 1=bkgd, 2=optical curves, 3=nIR curves, 4=threshold line'''
@@ -1360,9 +1360,9 @@ def plot_cumulative_detections_v_tobs_Fulton(self, pltt=True, label=False,
         tobs = np.append(0, np.cumsum(tobs))
         Ndet = np.arange(tobs.size)
 	ax1.plot(tobs, Ndet, '-', c=colN, drawstyle='steps')
-	ax2.text(.7, .66, 'Near-IR', color=colN, fontsize=13, 
+	ax2.text(.55, .66, 'Near-IR (YJH)', color=colN, fontsize=13, 
 		 weight='semibold', transform=ax2.transAxes)
-        ax2.plot([8e2,2e3], np.repeat(.4,2), '-', c=colN)
+        ax2.plot([3e2,9e2], np.repeat(.4,2), '-', c=colN)
         tobs2, dNdt = _compute_curve_derivative(tobs, Ndet)
         ax2.plot(tobs2, dNdt, '-', c=colN)
         ax4.plot(tobs, Ndet, '-', c=colN, drawstyle='steps')
@@ -1387,9 +1387,9 @@ def plot_cumulative_detections_v_tobs_Fulton(self, pltt=True, label=False,
         tobs = np.append(0, np.cumsum(tobs))
         Ndet = np.arange(tobs.size)
         ax1.plot(tobs, Ndet, '--', c=colH, lw=2, drawstyle='steps')
-        ax2.text(.7, .82, 'Optical', color=colH, fontsize=13,
+        ax2.text(.55, .82, 'Optical (BVR)', color=colH, fontsize=13,
                  weight='semibold', transform=ax2.transAxes)
-        ax2.plot([8e2,2e3], np.repeat(1,2), '--', c=colH)
+        ax2.plot([3e2,9e2], np.repeat(1,2), '--', c=colH)
         # plot derivative
         tobs2, dNdt = _compute_curve_derivative(tobs, Ndet)
         ax2.plot(tobs2, dNdt, '--', c=colH, lw=2)
@@ -1424,11 +1424,11 @@ def plot_cumulative_detections_v_tobs_Fulton(self, pltt=True, label=False,
     ax2.set_yscale('log'), ax2.set_ylim((1e-2,2))
     ax2.set_xscale(xscale), ax2.set_xlim((1,tmax))
     ax1.minorticks_on()
-    ax4.set_xlim((0,900)), ax4.set_ylim((0,80))
+    ax4.set_xlim((0,900)), ax4.set_ylim((0,60))
     ax4.set_xticks(np.arange(0,901,300))
     ax4.set_xticklabels(np.arange(0,901,300), fontsize=11)
-    ax4.set_yticks(np.arange(0,85,20))
-    ax4.set_yticklabels(np.arange(0,85,20), fontsize=11)
+    ax4.set_yticks(np.arange(0,65,20))
+    ax4.set_yticklabels(np.arange(0,65,20), fontsize=11)
     ax4.minorticks_on()
     if pltflag in [0,1]:
         ax1.set_ylabel('Total number of\nplanet detections', fontsize=13)
@@ -1512,9 +1512,9 @@ def plot_cumulative_detections_v_tobs_Fulton(self, pltt=True, label=False,
 
 
 def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
-                                                   tmax=1e5, Nrand=10, seed=0,
+                                                   tmax=7e5, Nrand=10, seed=0,
                                                    pltflag=0, GP=True,
-                                                   sigmarho=3.):
+                                                   sigmarho=3., sigma=5.):
     '''0=full, 1=background, 2=opt curves, 3=nir curves'''
     fig = plt.figure(figsize=(5.1,6.3))# 5.2
     gs = gridspec.GridSpec(10,1)
@@ -1526,7 +1526,7 @@ def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
     g = snr >= 10
     #_,corr = _get_tobs_scaling(sigmarho, self.starnums_med[g], self.mps_med[g])
     #print '%i planets'%np.where(np.isfinite(corr))[0].size
-    corr = (.327/.189)**2
+    corr = (.327/.189)**2 if sigma == 5 else 1
     
     # NIRPS total observing time
     if pltflag in [0,3]:
@@ -1535,9 +1535,9 @@ def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
         tobs = np.append(0, np.cumsum(tobs))
 	Ndet = np.arange(tobs.size)
 	ax1.plot(tobs, Ndet, '-', c=colN, drawstyle='steps')
-	ax1.text(10, 120, 'Near-IR', color=colN, fontsize=13, 
-		 weight='semibold')
-        ax1.plot([3,8], np.repeat(135,2), '-', c=colN)
+	ax2.text(1500, .4, 'Near-IR (YJH)', color=colN, fontsize=13, 
+		 weight='semibold', verticalalignment='center')
+        ax2.plot([3.5e2,1e3], np.repeat(.4,2), '-', c=colN)
         tobs2, dNdt = _compute_curve_derivative(tobs, Ndet)
         ax2.plot(tobs2, dNdt, '-', c=colN)
         ax4.plot(tobs, Ndet, '-', c=colN, drawstyle='steps')
@@ -1561,9 +1561,9 @@ def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
         tobs = np.append(0, np.cumsum(tobs))
         Ndet = np.arange(tobs.size)
         ax1.plot(tobs, Ndet, '--', c=colH, lw=2, drawstyle='steps')
-        ax1.text(10, 220, 'Optical', color=colH, fontsize=13,
-                 weight='semibold')
-        ax1.plot([3,8], np.repeat(231,2), '--', c=colH)        
+        ax2.text(1500, 1, 'Optical (BVR)', color=colH, fontsize=13,
+                 weight='semibold', verticalalignment='center')
+        ax2.plot([3.5e2,1e3], np.repeat(1,2), '--', c=colH)        
         # plot derivative
         tobs2, dNdt = _compute_curve_derivative(tobs, Ndet)
         ax2.plot(tobs2, dNdt, '--', c=colH, lw=2)
@@ -1599,7 +1599,7 @@ def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
         ax1.set_ylabel('Total number of\nplanet detections', fontsize=13)
         ax2.set_xlabel('Cumulative observing time [hours]', fontsize=13)
         ax2.set_ylabel('dN / dt\n[detections / hour]', fontsize=12, labelpad=0)
-        ax1.set_title('TOIs for JWST follow-up', fontsize=13, y=1.14)
+        ax1.set_title('TOIs for JWST transmission follow-up', fontsize=13, y=1.14)
     else:
         ax1.set_yticklabels('')
         ax2.set_xticklabels('')
@@ -1617,23 +1617,23 @@ def plot_cumulative_detections_v_tobs_transmission(self, pltt=True, label=False,
         ax3.set_yticklabels('')
 
     # add inset
-    ax4.set_xlim((0,45e2)), ax4.set_ylim((0,380))
-    ax4.set_xticks(np.arange(0,4600,15e2))
-    ax4.set_xticklabels(np.arange(0,4600,15e2,dtype=int), fontsize=11)
-    ax4.set_yticks(np.arange(0,310,100))
-    ax4.set_yticklabels(np.arange(0,310,100,dtype=int), fontsize=11)
+    ax4.set_xlim((0,28e2)), ax4.set_ylim((0,240))
+    ax4.set_xticks(np.arange(0,3000,1e3))
+    ax4.set_xticklabels(np.arange(0,3000,1e3,dtype=int), fontsize=11)
+    ax4.set_yticks(np.arange(0,210,100))
+    ax4.set_yticklabels(np.arange(0,210,100,dtype=int), fontsize=11)
     ax4.minorticks_on()
 
     # second x-axis
     ax5 = ax4.twiny()
     ax5.set_xlim(tuple(np.ascontiguousarray(ax4.get_xlim())/7.))
     if pltflag in [0,1]:
-        ax5.set_xticks(np.arange(0,601,200))
-        ax5.set_xticklabels(np.arange(0,601,200), fontsize=11,
+        ax5.set_xticks(np.arange(0,401,100))
+        ax5.set_xticklabels(np.arange(0,401,100), fontsize=11,
                             verticalalignment='baseline')
         ax4.set_xlabel('[hours]', fontsize=10, labelpad=0)
         ax5.set_xlabel('[nights]', fontsize=10)
-        ax5.set_xlim((0,45e2/7))
+        ax5.set_xlim((0,28e2/7))
         ax5.minorticks_on()
     else:
         ax5.set_yticklabels('')
@@ -1875,14 +1875,14 @@ def _get_tobs_scaling(sigmarho, starnums, mps, sigP=5e-5,
     
 
 def plot_cumulative_detections_v_tobs_HZ(self, pltt=True, label=False,
-                                         tmax=1e4, Nrand=10, seed=0, pltflag=0,
+                                         tmax=2e4, Nrand=10, seed=0, pltflag=0,
                                          GP=True, sigma=3.):
     '''0=full, 1=background, 2=opt curves, 3=nir curves'''
     fig = plt.figure(figsize=(5.1,6.3))# 5.2
     gs = gridspec.GridSpec(10,1)
     ax1 = plt.subplot(gs[:7,0])
     ax2 = plt.subplot(gs[7:,0])
-    ax4 = fig.add_axes([.25, .62, .25, .2])
+    #ax4 = fig.add_axes([.25, .62, .25, .2])
     np.random.seed(int(seed))
     corr = (.327/.189)**2 if sigma == 5 else 1.
     g = (self.HZflags_med == 1) & (self.rps_med <= 2)
@@ -1894,12 +1894,12 @@ def plot_cumulative_detections_v_tobs_HZ(self, pltt=True, label=False,
         tobs = np.append(0, np.cumsum(tobs))
 	Ndet = np.arange(tobs.size)
 	ax1.plot(tobs, Ndet, '-', c=colN, drawstyle='steps')
-	ax2.text(5e2, 3e-1, 'Near-IR', color=colN, fontsize=13, 
+	ax2.text(2e2, 3e-1, 'Near-IR (YJH)', color=colN, fontsize=13, 
 		 weight='semibold')
-        ax2.plot([2e2,4e2], np.repeat(4e-1,2), '-', c=colN)
+        ax2.plot([70,160], np.repeat(4e-1,2), '-', c=colN)
         tobs2, dNdt = _compute_curve_derivative(tobs, Ndet)
         ax2.plot(tobs2, dNdt, '-', c=colN)
-        ax4.plot(tobs, Ndet, '-', c=colN, drawstyle='steps')
+        #ax4.plot(tobs, Ndet, '-', c=colN, drawstyle='steps')
     if pltflag in [0,3]:
         inds = np.arange(g.sum())
         for i in range(Nrand):
@@ -1909,7 +1909,7 @@ def plot_cumulative_detections_v_tobs_HZ(self, pltt=True, label=False,
             tobs = np.append(0, np.cumsum(tobs))
             Ndet = np.arange(tobs.size)
             ax1.plot(tobs, Ndet, '-', c=colN, drawstyle='steps', lw=.3)
-            ax4.plot(tobs, Ndet, '-', c=colN, drawstyle='steps', lw=.3)
+            #ax4.plot(tobs, Ndet, '-', c=colN, drawstyle='steps', lw=.3)
             #tobs2, dNdt = _compute_curve_derivative(tobs, Ndet, 50)
             #ax2.plot(tobs2, dNdt, '-', c=colN, lw=.3)
 
@@ -1920,14 +1920,14 @@ def plot_cumulative_detections_v_tobs_HZ(self, pltt=True, label=False,
         tobs = np.append(0, np.cumsum(tobs))
         Ndet = np.arange(tobs.size)
         ax1.plot(tobs, Ndet, '--', c=colH, lw=2, drawstyle='steps')
-        ax2.text(5e2, 7e-1, 'Optical', color=colH, fontsize=13,
+        ax2.text(2e2, 7e-1, 'Optical (BVR)', color=colH, fontsize=13,
                  weight='semibold')
-        ax2.plot([2e2,4e2], np.repeat(9e-1,2), '--', c=colH)        
+        ax2.plot([70,170], np.repeat(9e-1,2), '--', c=colH)        
         # plot derivative
         tobs2, dNdt = _compute_curve_derivative(tobs, Ndet)
         ax2.plot(tobs2, dNdt, '--', c=colH, lw=2)
         # plot linear subplot
-        ax4.plot(tobs, Ndet, '--', c=colH, lw=2, drawstyle='steps')
+        #ax4.plot(tobs, Ndet, '--', c=colH, lw=2, drawstyle='steps')
     if pltflag in [0,1]:
         threshold = 1./20  # detections / hour
         ax2.plot([1,tmax], np.repeat(threshold,2), 'k--')
@@ -1943,7 +1943,7 @@ def plot_cumulative_detections_v_tobs_HZ(self, pltt=True, label=False,
             tobs = np.append(0, np.cumsum(tobs))
             Ndet = np.arange(tobs.size)
             ax1.plot(tobs, Ndet, '--', c=colH, drawstyle='steps', lw=.3)
-            ax4.plot(tobs, Ndet, '--', c=colH, drawstyle='steps', lw=.3)
+            #ax4.plot(tobs, Ndet, '--', c=colH, drawstyle='steps', lw=.3)
             #tobs2, dNdt = _compute_curve_derivative(tobs, Ndet, 50)
             #ax2.plot(tobs2, dNdt, '--', c=colH, lw=.3)
             
@@ -1967,12 +1967,12 @@ def plot_cumulative_detections_v_tobs_HZ(self, pltt=True, label=False,
 
     ax1.minorticks_on()
     ax2.minorticks_on()
-    ax4.set_xlim((0,70)), ax4.set_ylim((0,6))
-    ax4.set_xticks(np.arange(0,70,20))
-    ax4.set_xticklabels(np.arange(0,70,20), fontsize=11)
-    ax4.set_yticks(np.arange(0,7,2))
-    ax4.set_yticklabels(np.arange(0,7,2,dtype=int), fontsize=11)
-    ax4.minorticks_on()
+    #ax4.set_xlim((0,70)), ax4.set_ylim((0,6))
+    #ax4.set_xticks(np.arange(0,70,20))
+    #ax4.set_xticklabels(np.arange(0,70,20), fontsize=11)
+    #ax4.set_yticks(np.arange(0,7,2))
+    #ax4.set_yticklabels(np.arange(0,7,2,dtype=int), fontsize=11)
+    #ax4.minorticks_on()
 
     # second derivative axis
     ax3 = ax2.twinx()
@@ -1986,18 +1986,18 @@ def plot_cumulative_detections_v_tobs_HZ(self, pltt=True, label=False,
         ax3.set_yticklabels('')
 
     # second x-axis
-    ax5 = ax4.twiny()
-    ax5.set_xlim(tuple(np.ascontiguousarray(ax4.get_xlim())/7.))
-    if pltflag in [0,1]:
-        ax5.set_xticks(np.arange(0,11,5))
-        ax5.set_xticklabels(np.arange(0,11,5), fontsize=11,
-                            verticalalignment='baseline')
-        ax4.set_xlabel('[hours]', fontsize=10)
-        ax5.set_xlabel('[nights]', fontsize=10)
-        ax5.set_xlim((0,70/7.))
-        ax5.minorticks_on()
-    else:
-        ax5.set_yticklabels('')
+    #ax5 = ax4.twiny()
+    #ax5.set_xlim(tuple(np.ascontiguousarray(ax4.get_xlim())/7.))
+    #if pltflag in [0,1]:
+        #ax5.set_xticks(np.arange(0,11,5))
+        #ax5.set_xticklabels(np.arange(0,11,5), fontsize=11,
+        #                    verticalalignment='baseline')
+        #ax4.set_xlabel('[hours]', fontsize=10)
+        #ax5.set_xlabel('[nights]', fontsize=10)
+        #ax5.set_xlim((0,70/7.))
+        #ax5.minorticks_on()
+    #else:
+        #ax5.set_yticklabels('')
 
     # second x-axis
     ax6 = ax1.twiny()
@@ -2018,8 +2018,8 @@ def plot_cumulative_detections_v_tobs_HZ(self, pltt=True, label=False,
         ax1.axis('off')
         ax2.axis('off')
         ax3.axis('off')
-        ax4.axis('off')
-        ax5.axis('off')
+        #ax4.axis('off')
+        #ax5.axis('off')
         ax6.axis('off')
     fig.subplots_adjust(left=.19, bottom=.09, top=.89, right=.84, hspace=0)
     if label:
@@ -2060,7 +2060,7 @@ def _compute_curve_derivative(tobs, Ndet, sigma=5):
 
 
 def plot_identifying_best_50(self, s=20, pltt=True, label=False, pltflag=0,
-                             GP=True):
+                             GP=True, sigma=5.):
     '''
     Plot variables to try and guess which parameters best tell which small 
     planets we can observe most efficiently.
@@ -2069,7 +2069,7 @@ def plot_identifying_best_50(self, s=20, pltt=True, label=False, pltflag=0,
     '''
     tobsH = self.tobsGPs_med_H/7 if GP else self.tobss_med_H/7
     tobsN = self.tobsGPs_med_N/7 if GP else self.tobss_med_N/7
-    scale = (.327/.189)**2
+    scale = (.327/.189)**2 if sigma == 5 else 1.
     tobsN *= scale
     tobsH *= scale
     transit_quantity = lambda P, rp: rp/P**(1./3)
@@ -2103,12 +2103,14 @@ def plot_identifying_best_50(self, s=20, pltt=True, label=False, pltflag=0,
     # fill 'good' region
     if pltflag in [0,3]:
         m, b = get_best_fraction(self.Vmags_med, TQs, tobsH, self.rps_med)
+        Vmax = 10.7
         print 'V slope and intercept: ', m, b
+        print 'Vmax: ', Vmax
         line = lambda x: m*x + b
-        ax1.fill_between([3.5,11.4], [line(3.5),line(11.4)], 30, color='k',
+        ax1.fill_between([3.5,Vmax], [line(3.5),line(Vmax)], 30, color='k',
                          alpha=.15)
-        ax1.plot(np.repeat(11.4,2), [line(11.4),30], 'k--', lw=1.7)
-        ax1.plot([3.5,11.4], [line(3.5),line(11.4)], 'k--', lw=1.7)
+        ax1.plot(np.repeat(Vmax,2), [line(Vmax),30], 'k--', lw=1.7)
+        ax1.plot([3.5,Vmax], [line(3.5),line(Vmax)], 'k--', lw=1.7)
     
     ax1.set_xlabel('V', labelpad=1, fontsize=14, style='italic')
     ax1.set_ylabel('$\Omega \equiv$ r$_p$ / P$^{1/3}$',
@@ -2137,13 +2139,15 @@ def plot_identifying_best_50(self, s=20, pltt=True, label=False, pltflag=0,
     # fill 'good' region
     if pltflag in [0,3]:
         m, b = get_best_fraction(self.Jmags_med, TQs, tobsN, self.rps_med)
+        Jmax = 11.7
         print 'J slope and intercept: ', m, b
+        print 'Jmax: ', Jmax
         line = lambda x: m*x + b
-        ax2.fill_between([3.5,11.7], [line(3.5),line(11.7)], 30, color='k',
+        ax2.fill_between([3.5,Jmax], [line(3.5),line(Jmax)], 30, color='k',
                          alpha=.15)
-        ax2.plot(np.repeat(11.7,2), [line(11.7),30], 'k--', lw=1.7)
-        ax2.plot([3.5,11.7], [line(3.5),line(11.7)], 'k--', lw=1.7)
-    
+        ax2.plot(np.repeat(Jmax,2), [line(Jmax),30], 'k--', lw=1.7)
+        ax2.plot([3.5,Jmax], [line(3.5),line(Jmax)], 'k--', lw=1.7)
+
     ax2.set_xlabel('J', labelpad=1, fontsize=14, style='italic')
     ax2.set_ylabel('$\Omega \equiv$ r$_p$ / P$^{1/3}$',
                    fontsize=12)

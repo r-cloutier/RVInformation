@@ -2,6 +2,7 @@ import numpy as np
 import glob, os, rvs
 import cPickle as pickle
 from scipy.interpolate import LinearNDInterpolator as lint
+from compute_sigmaRV import get_snr
 
 class RVInformation:
 
@@ -13,8 +14,8 @@ class RVInformation:
 	self._get_median_star_results()
         self._get_median_star_results_per_spectrograph()
 	# as per referee
-        #self._add_readnoise()
-	self._change_throughput()
+	self._change_throughput() # must come before _add_readnoise
+	self._add_readnoise()
 	self._pickleobject()
 
 
@@ -398,26 +399,77 @@ class RVInformation:
             self.NrvGPs_emed_S[i] = MAD(self.NrvGPs[nir])
 
 
+    def _add_readnoise(self):
+	'''Add readnoise to the S/N which will then affect the value of 
+	sigmaRV, expecially those observed at a low photon limited S/N.'''
+	# get signal over all bands
+	SsH, SsN = np.zeros(self.nstars), np.zeros(self.nstars)
+	for i in range(self.nstars):
+
+	    # get signal per resolution element in each band
+	    SbandsH, SbandsN = np.zeros(3), np.zeros(3)
+	    bandsH, bandsN = ['B','V','R'], ['Y','J','H']
+	    for j in range(3):
+		if bandsH[j] == 'B':
+		    mag = self.Bmags_med[i]
+		elif bandsH[j] == 'V':
+		    mag = self.Vmags_med[i]
+		else:
+		    mag = self.Rmags_med[i]
+		SbandsH[j] = get_snr(mag, bandsH[j], self.texps_med_H[i], 3.6, .05, 1e5)**2
+
+                if bandsN[j] == 'Y':
+                    mag = self.Ymags_med[i]
+                elif bandsN[j] == 'J':
+                    mag = self.Jmags_med[i]
+                else:
+                    mag = self.Hmags_med[i]
+                SbandsN[j] = get_snr(mag, bandsN[j], self.texps_med_N[i], 3.6, .05, 1e5)**2
+
+	    # get average signal per resolution element
+	    SsH[i] = np.mean(SbandsH)
+	    SsN[i] = np.mean(SbandsN)
+
+	# derive scaling (S/N_new over S/N_old) with read noise added
+	RON_per_pixel, PSFsampling_pixels = 5., 4.
+	RON = RON_per_pixel * np.sqrt(PSFsampling_pixels**2)
+	scalingH = np.sqrt(SsH + RON**2) / np.sqrt(SsH)
+	scalingN = np.sqrt(SsN + RON**2) / np.sqrt(SsN)
+
+        # get scaling of sigmaRV
+        eff_scaleH = np.sqrt((self.sigmaRV_phot_med_H*scalingH)**2 + self.sigmaRV_acts_med_H**2 + self.sigmaRV_planets_med_H**2) / np.sqrt(self.sigmaRV_phot_med_H**2 + self.sigmaRV_acts_med_H**2 + self.sigmaRV_planets_med_H**2)
+        eff_scaleN = np.sqrt((self.sigmaRV_phot_med_N*scalingN)**2 + self.sigmaRV_acts_med_N**2 + self.sigmaRV_planets_med_N**2) / np.sqrt(self.sigmaRV_phot_med_N**2 + self.sigmaRV_acts_med_N**2 + self.sigmaRV_planets_med_N**2)
+	
+        # scale the parameters in each spectrograph
+        self.sigmaRV_phot_med_H *= scalingH
+        self.sigmaRV_phot_med_N *= scalingN
+        self.sigmaRV_eff_med_H *= eff_scaleH
+        self.sigmaRV_eff_med_N *= eff_scaleN
+        self.tobss_med_H *= eff_scaleH**2
+        self.tobss_med_N *= eff_scaleN**2
+        self.tobsGPs_med_H *= eff_scaleH**2
+        self.tobsGPs_med_N *= eff_scaleN**2
+
+
     def _change_throughput(self, throughput_new=.05):
+	# change throughput
 	throughput_old = self.throughputs_med.mean()
 	factor = np.sqrt(throughput_old/throughput_new)	
 	self.throughputs_med = np.ones_like(self.throughputs_med) * throughput_new
 
+	# get scaling of sigmaRV
 	eff_scaleH = np.sqrt((self.sigmaRV_phot_med_H*factor)**2 + self.sigmaRV_acts_med_H**2 + self.sigmaRV_planets_med_H**2) / np.sqrt(self.sigmaRV_phot_med_H**2 + self.sigmaRV_acts_med_H**2 + self.sigmaRV_planets_med_H**2)
 	eff_scaleN = np.sqrt((self.sigmaRV_phot_med_N*factor)**2 + self.sigmaRV_acts_med_N**2 + self.sigmaRV_planets_med_N**2) / np.sqrt(self.sigmaRV_phot_med_N**2 + self.sigmaRV_acts_med_N**2 + self.sigmaRV_planets_med_N**2)
 
+	# scale the parameters in each spectrograph
 	self.sigmaRV_phot_med_H *= factor
 	self.sigmaRV_phot_med_N *= factor
-
 	self.sigmaRV_eff_med_H *= eff_scaleH
 	self.sigmaRV_eff_med_N *= eff_scaleN
-
 	self.tobss_med_H *= eff_scaleH**2
         self.tobss_med_N *= eff_scaleN**2
-
         self.tobsGPs_med_H *= eff_scaleH**2
         self.tobsGPs_med_N *= eff_scaleN**2
-
 
             
     def _pickleobject(self):
