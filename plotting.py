@@ -181,7 +181,17 @@ def plot_Nrv_estimates(pltt=True, label=False):
     cticklabels[0], cticklabels[9], cticklabels[18] = '1', '10', '100'
     cbar.ax.set_xticklabels(cticklabels) 
     cbar.set_label(r'K [m/s]', labelpad=.1)
-    
+   
+    # plot bad red nosie sources
+    plt_red = 0
+    if plt_red:
+	g = rednoiseflag == 1
+	print 'here %i'%(g.sum())
+	ax.scatter(Nrv_true[g], Nrv_calc[g], edgecolors='k', marker='d',
+                   c=c[g], s=60, label='correlated noise model',
+		   norm=LogNorm(vmin=vmin, vmax=vmax),
+                   cmap=_truncate_colormap(plt.get_cmap('rainbow'),0,1)) 
+
     names = ['CoRoT7','K218','Kep21HARPSN','Kep78HARPSN','LHS1140']
     names2 = ['CoRoT-7','K2-18','Kepler-21','Kepler-78','LHS 1140']
     xs, ys = [80,57,82,110,270], [60,85,130,140,180]
