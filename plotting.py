@@ -184,10 +184,10 @@ def plot_Nrv_estimates(pltt=True, label=False):
     
     names = ['CoRoT7','K218','Kep21HARPSN','Kep78HARPSN','LHS1140']
     names2 = ['CoRoT-7','K2-18','Kepler-21','Kepler-78','LHS 1140']
-    xs, ys = [80,57,82,110,150], [60,85,130,140,200]
-    Ks = np.array([3.42, 3.18, 2.12, 1.86, 5.3])
-    sigKtargets, Nrvtargets = np.array([.66,.75,.66,.25,1.1]), \
-			      np.array([71,75,82,109,144])
+    xs, ys = [80,57,82,110,270], [60,85,130,140,180]
+    Ks = np.array([3.42, 3.18, 2.12, 1.86, 4.71])
+    sigKtargets, Nrvtargets = np.array([.66,.75,.66,.25,.5]), \
+			      np.array([71,75,82,109,293])
     sigeffs = sigKtargets * np.sqrt(Nrvtargets/2.)
     GPNrvs = np.zeros((sigeffs.size, 2))
     for i in range(sigeffs.size):
@@ -200,18 +200,17 @@ def plot_Nrv_estimates(pltt=True, label=False):
                 '%s = %s'%(ascii_uppercase[i], names2[i]), fontsize=8)
     ax.errorbar(Nrvtargets, GPNrvs[:,0], GPNrvs[:,1], fmt='ko', ms=0,
                 elinewidth=.8, capsize=0)
-    print GPNrvs[:,0], GPNrvs[:,1]
     ax.scatter(Nrvtargets, GPNrvs[:,0], edgecolors='k', marker='d',
                c=Ks/sigKtargets, s=60, label='correlated noise model',
                norm=LogNorm(vmin=vmin, vmax=vmax),
 	       cmap=_truncate_colormap(plt.get_cmap('rainbow'),0,1))
     
-    arr = np.linspace(0, 3e2, 100)
+    arr = np.linspace(0, 350, 100)
     ax.plot(arr, arr, 'k--', lw=2)
 
     ax.set_xscale('log'), ax.set_yscale('log')
     ax.set_xlabel('Observed N$_{RV}$'), ax.set_ylabel('Calculated N$_{RV}$')
-    ax.set_xlim((1, 3e2)), ax.set_ylim((1, 3e2))
+    ax.set_xlim((1, 350)), ax.set_ylim((1, 350))
     ax.set_xticks(np.logspace(0,2,3))
     ax.set_xticklabels(['%i'%i for i in np.logspace(0,2,3)])
     ax.set_yticks(np.logspace(0,2,3))

@@ -44,23 +44,29 @@ def sigK_K218(N=1e3, P=32.93963, T0=2457264.39157):
 def sigK_LHS1140(N=1e3, P=24.73712, T0=2456915.6997):
     '''From Dittmann et al 2017'''
     # get time-series
+    #bjd, rv, erv = np.loadtxt('Nrv_tests/LHS1140old.dat').T
     bjd, rv, erv = np.loadtxt('Nrv_tests/LHS1140.dat').T
-    
+    Pc, T0c, Kc = 3.777931, 2458226.343169+.5, 2.35
+    kepc = get_rv1((Pc,T0c,0,Kc,0,0), bjd)
+    rv -= kepc
+
     # sample parameter posteriors approximating the PDFs as Gaussian
     N = int(N)
-    Krvs = _random_normal_draws(5.3, 1.1, N, positive=True)
-    As = _random_normal_draws(9, 5, N, positive=True)
-    ls = _random_normal_draws(393/np.sqrt(2), 30/np.sqrt(2), N, positive=True)
-    Gs = _random_normal_draws(2, .2, N, positive=True)
-    Ps = _random_normal_draws(134, 10, N, positive=True) # median of posterior
-    ss = _random_normal_draws(3, 1, N, positive=True)
+    Krvs = _random_normal_draws(4.85, .55, N, positive=True)
+    As = _random_normal_draws(2.7, .81, N, positive=True)  # 9,5
+    ls = _random_normal_draws(49.8, 38, N, positive=True)
+    Gs = _random_normal_draws(1.44, .2, N, positive=True)
+    Ps = _random_normal_draws(132.9, 10, N, positive=True) # median of posterior
+    ss = _random_normal_draws(2.7, .3, N, positive=True)  # 3,1
 
     # Monte-Carlo computation of sigKs
     sigKs = np.zeros(N)
     for i in range(N):
+	print float(i)/N
         theta = P, T0, Krvs[i], As[i], ls[i], Gs[i], Ps[i], ss[i]
         sigKs[i] = compute_sigmaK_GP(theta, bjd, rv, erv)
-
+	print sigKs[i]
+	
     # save output
     _save_draws('LHS1140', Krvs, As, ls, Gs, Ps, ss, sigKs)
 
